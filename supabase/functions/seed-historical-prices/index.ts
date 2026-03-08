@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const PUBLIC_SAMPLE_KEY = '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
+
 function extractField(record: any, ...possibleKeys: string[]): string | null {
   for (const key of possibleKeys) {
     const val = record[key] ?? record[key.toLowerCase()] ?? record[key.replace(/_/g, ' ')] ?? record[key.replace(/ /g, '_')];
@@ -16,12 +18,9 @@ function extractField(record: any, ...possibleKeys: string[]): string | null {
 
 function parseDateFlexible(dateStr: string): string {
   if (!dateStr) return new Date().toISOString().split('T')[0];
-  // ISO: 2025-03-01
   if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr.split('T')[0];
-  // DD/MM/YYYY or DD-MM-YYYY
   const slashMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (slashMatch) return `${slashMatch[3]}-${slashMatch[2].padStart(2, '0')}-${slashMatch[1].padStart(2, '0')}`;
-  // DD-Mon-YYYY
   const months: Record<string, string> = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
   const monMatch = dateStr.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
   if (monMatch) return `${monMatch[3]}-${months[monMatch[2]] || '01'}-${monMatch[1].padStart(2, '0')}`;
@@ -42,21 +41,17 @@ serve(async (req) => {
 
   try {
     const { commodity, mandi, days = 90 } = await req.json();
-    const apiKey = Deno.env.get('DATAGOV_API_KEY');
+    const userKey = Deno.env.get('DATAGOV_API_KEY');
+    const effectiveApiKey = userKey || PUBLIC_SAMPLE_KEY;
+    const sourceLabel = userKey ? 'data.gov.in' : 'data.gov.in-public-key';
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'DATAGOV_API_KEY not configured', inserted: 0, skipped: 0 }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const now = new Date();
     const from = new Date();
     from.setDate(from.getDate() - days);
 
     const url = new URL('https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070');
-    url.searchParams.set('api-key', apiKey);
+    url.searchParams.set('api-key', effectiveApiKey);
     url.searchParams.set('format', 'json');
     url.searchParams.set('limit', '500');
     url.searchParams.set('filters[State.keyword]', 'Maharashtra');
@@ -69,7 +64,7 @@ serve(async (req) => {
     const data = await res.json();
 
     if (!data.records || data.records.length === 0) {
-      return new Response(JSON.stringify({ inserted: 0, skipped: 0, date_range: `${formatDateForAPI(from)} - ${formatDateForAPI(now)}` }), {
+      return new Response(JSON.stringify({ inserted: 0, skipped: 0, source: sourceLabel, date_range: `${formatDateForAPI(from)} - ${formatDateForAPI(now)}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -93,7 +88,7 @@ serve(async (req) => {
           max_price: parseFloat(extractField(rec, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
           modal_price: modalPrice,
           arrivals_qtl: parseFloat(extractField(rec, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
-          source: 'data.gov.in',
+          source: sourceLabel,
         };
 
         const { error } = await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
@@ -103,11 +98,11 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      inserted, skipped,
+      inserted, skipped, source: sourceLabel,
       date_range: `${formatDateForAPI(from)} - ${formatDateForAPI(now)}`,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

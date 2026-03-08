@@ -181,7 +181,8 @@ const SettingsPage = () => {
             <p>Personal Farm Intelligence for Bhavere, Nashik</p>
             <p>Crops: Banana · Tomato · Karela · Papaya · Onion</p>
             <p>Data sources: Open-Meteo, data.gov.in, Agmarknet</p>
-            <p>AI: Claude (Anthropic) — Direct API</p>
+            <p>Intelligence: Smart Advisor (free) + Claude AI (optional)</p>
+            <p>Data sources: Open-Meteo (weather), data.gov.in (prices, no key required), Agmarknet (fallback)</p>
           </div>
         </div>
       </main>

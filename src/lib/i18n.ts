@@ -108,6 +108,13 @@ const translations: Record<string, Record<Lang, string>> = {
   'setup.openSettings': { en: 'Open Settings →', mr: 'सेटिंग्ज उघडा →' },
   'setup.needHistory': { en: '📊 No price history yet. Go to Settings → Load 90-Day History to activate trend analysis and sell signals.', mr: '📊 किंमत इतिहास नाही. सेटिंग्ज → ९०-दिवसीय इतिहास लोड करा.' },
   'setup.goToSettings': { en: 'Go to Settings →', mr: 'सेटिंग्ज वर जा →' },
+
+  // Smart Advisor
+  'smart_advisor': { en: 'Smart Advisor', mr: 'स्मार्ट सल्लागार' },
+  'smart_advisor_badge': { en: '🧠 Smart Advisor', mr: '🧠 स्मार्ट सल्लागार' },
+  'using_public_data': { en: 'Using public data source', mr: 'सार्वजनिक डेटा स्रोत वापरत आहे' },
+  'no_key_needed': { en: 'No key needed', mr: 'की आवश्यक नाही' },
+  'smart_advisor_active': { en: 'Smart Advisor active', mr: 'स्मार्ट सल्लागार सक्रिय' },
 };
 
 export function t(key: string, lang?: Lang): string {

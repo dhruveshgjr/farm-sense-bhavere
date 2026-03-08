@@ -12,6 +12,7 @@ import { formatLastUpdated } from '@/lib/timeFormat';
 import { useLanguage } from '@/hooks/useLanguage';
 import { getSignalText, formatNumber } from '@/lib/i18n';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSmartAdvice } from '@/lib/smartAdvisor';
 
 const TodayPage = () => {
   const { t, language } = useLanguage();
@@ -19,18 +20,34 @@ const TodayPage = () => {
   const { data: prices = [] } = usePrices();
   const fetchMutation = useFetchPrices();
   const [aiPriority, setAiPriority] = useState<string | null>(null);
+  const [prioritySource, setPrioritySource] = useState<'ai' | 'smart' | null>(null);
 
   useEffect(() => { document.title = 'KisanMitra — Today\'s Brief'; }, []);
 
+  // Try AI cache first, then use Smart Advisor
   useEffect(() => {
     supabase.from('ai_advice_cache').select('advice_text').order('generated_at', { ascending: false }).limit(1)
       .then(({ data }) => {
         if (data?.[0]?.advice_text) {
           const match = data[0].advice_text.match(/TODAY'S PRIORITY:\s*(.+?)(?:\n|$)/i);
-          if (match) setAiPriority(match[1].trim());
+          if (match) {
+            setAiPriority(match[1].trim());
+            setPrioritySource('ai');
+            return;
+          }
+        }
+        // No AI cache — use Smart Advisor
+        if (weather) {
+          const allAlerts = getPrioritySummary(generateAllAdvisories(weather));
+          const month = new Date().getMonth() + 1;
+          const smart = generateSmartAdvice(weather, prices, allAlerts, month);
+          if (smart.todays_priority) {
+            setAiPriority(smart.todays_priority);
+            setPrioritySource('smart');
+          }
         }
       });
-  }, []);
+  }, [weather, prices]);
 
   const today = new Date();
   const dayName = today.toLocaleDateString(language === 'mr' ? 'mr-IN' : 'en-IN', { weekday: 'long' });
@@ -68,7 +85,7 @@ const TodayPage = () => {
 
   // Priority fallback chain
   const getTodaysPriority = () => {
-    if (aiPriority) return { text: aiPriority, source: 'ai' as const };
+    if (aiPriority) return { text: aiPriority, source: (prioritySource || 'smart') as 'ai' | 'smart' | 'danger' | 'warning' | 'clear' };
     const topDanger = sorted.find(a => a.level === 'DANGER');
     if (topDanger) return { text: `${topDanger.crop}: ${topDanger.action}`, source: 'danger' as const };
     const topWarning = sorted.find(a => a.level === 'WARNING');
@@ -79,6 +96,7 @@ const TodayPage = () => {
 
   const sourceBadge: Record<string, string> = {
     ai: t('today.aiGenerated'),
+    smart: t('smart_advisor_badge'),
     danger: t('today.criticalAlert'),
     warning: t('today.weatherWarning'),
     clear: t('today.clear'),
@@ -128,7 +146,7 @@ const TodayPage = () => {
                 <div className="text-[9px] text-muted-foreground">→ {bestCrop.mandi}</div>
               </>
             ) : (
-              <div className="text-[10px] text-muted-foreground">{hasPrices ? '—' : t('today.addApiKey')}</div>
+              <div className="text-[10px] text-muted-foreground">{hasPrices ? '—' : 'Fetch prices to see signals'}</div>
             )}
             <div className="text-[9px] text-muted-foreground mt-0.5">{t('today.bestSell')}</div>
           </div>
