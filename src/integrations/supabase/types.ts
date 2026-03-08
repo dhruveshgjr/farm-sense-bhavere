@@ -118,7 +118,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_price_stats: {
+        Args: { p_commodity: string; p_mandi: string }
+        Returns: {
+          avg_30d: number
+          avg_90d: number
+          current_price: number
+          price_date: string
+          volatility_score: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
