@@ -1,0 +1,149 @@
+import { useState } from 'react';
+import { AppHeader } from '@/components/AppHeader';
+import { BottomNav } from '@/components/BottomNav';
+import { CROPS } from '@/lib/farmConfig';
+import { usePriceHistory, type PriceRecord } from '@/hooks/usePrices';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+
+const HistoryPage = () => {
+  const { data: prices = [], isLoading } = usePriceHistory(365);
+  const [selectedCrops, setSelectedCrops] = useState<string[]>(CROPS.map(c => c.commodityName));
+
+  const toggleCrop = (commodity: string) => {
+    setSelectedCrops(prev =>
+      prev.includes(commodity) ? prev.filter(c => c !== commodity) : [...prev, commodity]
+    );
+  };
+
+  // Merge data for combined chart
+  const dateMap = new Map<string, Record<string, number>>();
+  prices.forEach(p => {
+    const key = p.price_date;
+    if (!dateMap.has(key)) dateMap.set(key, {});
+    const entry = dateMap.get(key)!;
+    if (!entry[p.commodity] || p.modal_price > entry[p.commodity]) {
+      entry[p.commodity] = p.modal_price;
+    }
+  });
+
+  const chartData = Array.from(dateMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vals]) => ({
+      date: new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      ...vals,
+    }));
+
+  // Stats
+  const allPrices = prices.map(p => p.modal_price);
+  const highest = allPrices.length ? Math.max(...allPrices) : 0;
+  const lowest = allPrices.length ? Math.min(...allPrices) : 0;
+  const highestCrop = prices.find(p => p.modal_price === highest);
+  const lowestCrop = prices.find(p => p.modal_price === lowest);
+
+  return (
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
+      <AppHeader />
+      <main className="container mx-auto px-3 py-4 max-w-2xl space-y-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: 'Highest Price', value: `₹${highest.toLocaleString()}`, sub: highestCrop?.commodity },
+            { label: 'Lowest Price', value: `₹${lowest.toLocaleString()}`, sub: lowestCrop?.commodity },
+            { label: 'Total Records', value: prices.length.toString(), sub: 'data points' },
+            { label: 'Crops Tracked', value: '5', sub: 'commodities' },
+          ].map(s => (
+            <div key={s.label} className="bg-card rounded-lg p-3 shadow-sm">
+              <div className="text-[10px] text-muted-foreground">{s.label}</div>
+              <div className="text-lg font-bold">{s.value}</div>
+              <div className="text-[10px] text-muted-foreground">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Crop selector */}
+        <div className="flex flex-wrap gap-3">
+          {CROPS.map(crop => (
+            <label key={crop.name} className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <Checkbox
+                checked={selectedCrops.includes(crop.commodityName)}
+                onCheckedChange={() => toggleCrop(crop.commodityName)}
+              />
+              <span style={{ color: crop.color }}>●</span>
+              <span>{crop.name}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Combined chart */}
+        <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+          <div className="section-header section-header-trends">📊 Price History — All Crops</div>
+          <div className="p-3">
+            {isLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : chartData.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                    {CROPS.filter(c => selectedCrops.includes(c.commodityName)).map(crop => (
+                      <Line
+                        key={crop.commodityName}
+                        type="monotone"
+                        dataKey={crop.commodityName}
+                        stroke={crop.color}
+                        strokeWidth={2}
+                        dot={false}
+                        name={crop.name}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-12">No price history data yet. Fetch prices from the Dashboard first.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+          <div className="section-header section-header-market">📋 All Price Records</div>
+          <div className="p-3 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-1.5">Date</th>
+                  <th className="text-left py-1.5">Crop</th>
+                  <th className="text-left py-1.5">Mandi</th>
+                  <th className="text-right py-1.5">Price (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prices.slice(0, 50).map(p => (
+                  <tr key={p.id} className="border-b border-border/50">
+                    <td className="py-1">{new Date(p.price_date).toLocaleDateString('en-IN')}</td>
+                    <td className="py-1">{p.commodity}</td>
+                    <td className="py-1">{p.mandi}</td>
+                    <td className="text-right py-1 font-medium">₹{p.modal_price.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {prices.length > 50 && (
+              <p className="text-[10px] text-muted-foreground text-center mt-2">Showing 50 of {prices.length} records</p>
+            )}
+          </div>
+        </div>
+      </main>
+      <BottomNav />
+    </div>
+  );
+};
+
+export default HistoryPage;
