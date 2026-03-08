@@ -60,7 +60,6 @@ const MarketPage = () => {
             mandi: p.mandi,
           }));
 
-          // Arrivals data
           const arrivalData = cropPrices
             .filter(p => p.arrivals_qtl && p.arrivals_qtl > 0)
             .map(p => ({
@@ -68,7 +67,6 @@ const MarketPage = () => {
               arrivals: p.arrivals_qtl,
             }));
 
-          // Volatility badge
           const vol = computeVolatility(cropPrices.map(p => p.modal_price));
           const volColor = vol.label === 'High' ? 'text-danger' : vol.label === 'Medium' ? 'text-warning' : 'text-success';
 
@@ -86,8 +84,8 @@ const MarketPage = () => {
               <div className="p-3">
                 {isLoading ? (
                   <Skeleton className="h-48 w-full" />
-                ) : chartPrices.length > 0 ? (
-                  <div className="h-48">
+                ) : chartPrices.length >= 7 ? (
+                  <div className="h-48 sm:h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartPrices}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -98,11 +96,16 @@ const MarketPage = () => {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
+                ) : chartPrices.length > 0 ? (
+                  <div className="h-48 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+                    <span className="text-2xl mb-2">📊</span>
+                    <span className="text-sm">Chart available after 7 days of price data</span>
+                    <span className="text-xs mt-1">Currently: {chartPrices.length} days collected</span>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">No price data available</p>
                 )}
 
-                {/* Arrivals bar chart */}
                 {arrivalData.length > 0 && (
                   <div className="mt-3">
                     <h4 className="text-xs font-semibold mb-1">Daily Arrivals at Mandi (Quintals)</h4>

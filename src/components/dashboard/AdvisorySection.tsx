@@ -33,8 +33,16 @@ export function AdvisorySection({ forecast, isLoading }: AdvisorySectionProps) {
       <div className="bg-card rounded-lg shadow-sm overflow-hidden">
         <div className="section-header section-header-advisory">🌱 Crop Advisory — This Week</div>
         <div className="p-4 space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
+          {[80, 64, 72].map((w, i) => (
+            <div key={i} className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 rounded-full" />
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3" style={{ width: `${w}%` }} />
+              </div>
+              <Skeleton className="h-2 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
           ))}
         </div>
       </div>

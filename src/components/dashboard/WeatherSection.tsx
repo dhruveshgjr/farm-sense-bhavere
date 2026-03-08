@@ -15,8 +15,13 @@ export function WeatherSection({ data, isLoading, lastFetched }: WeatherSectionP
       <div className="bg-card rounded-lg shadow-sm overflow-hidden">
         <div className="section-header section-header-weather">🌤 10-Day Weather Forecast — Bhavere</div>
         <div className="p-4 flex gap-2 overflow-x-auto">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="min-w-[72px] h-[140px] rounded-lg" />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="min-w-[72px] space-y-1.5">
+              <Skeleton className="h-3 w-10 mx-auto" />
+              <Skeleton className="h-6 w-6 mx-auto rounded-full" />
+              <Skeleton className="h-3 w-12 mx-auto" />
+              <Skeleton className="h-2 w-10 mx-auto" />
+            </div>
           ))}
         </div>
       </div>

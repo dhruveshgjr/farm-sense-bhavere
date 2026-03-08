@@ -10,7 +10,12 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { SystemHealthCheck } from '@/components/SystemHealthCheck';
+import { SecretStatusSection } from '@/components/SecretStatusSection';
+import { DataExportSection } from '@/components/DataExportSection';
+import { TelegramSettings } from '@/components/TelegramSettings';
 import { formatLastUpdated } from '@/lib/timeFormat';
+import { getLastDailyFetch } from '@/lib/cronManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const SettingsPage = () => {
@@ -32,7 +37,6 @@ const SettingsPage = () => {
         setDaySpan(new Set(data.map(r => r.price_date)).size);
       }
 
-      // Get last auto-run from report_history
       const { data: reports } = await supabase
         .from('report_history')
         .select('generated_at, notes')
@@ -42,7 +46,6 @@ const SettingsPage = () => {
         setLastAutoRun(reports[0].generated_at);
       }
 
-      // Today's records
       const today = new Date().toISOString().split('T')[0];
       const { count } = await supabase
         .from('daily_prices')
@@ -82,19 +85,6 @@ const SettingsPage = () => {
       setDaySpan(0);
       toast({ title: '✅ All cached prices cleared' });
     }
-  };
-
-  const handleExportAll = async () => {
-    const { data } = await supabase.from('daily_prices').select('*').order('price_date', { ascending: false });
-    if (!data || data.length === 0) { toast({ title: 'No data to export' }); return; }
-    const csv = ['Date,Commodity,Mandi,Min,Modal,Max,Source', ...data.map(r =>
-      `${r.price_date},${r.commodity},${r.mandi},${r.min_price ?? ''},${r.modal_price},${r.max_price ?? ''},${r.source ?? ''}`
-    )].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'kisanmitra_prices.csv'; a.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleSeedHistory = async () => {
@@ -140,22 +130,22 @@ const SettingsPage = () => {
     try {
       const { data, error } = await supabase.functions.invoke('daily-price-cron', { method: 'POST' });
       if (error) throw error;
-      toast({ title: '✅ Manual cron run complete', description: `Fetched: ${data?.fetched ?? 0}, Alerts: ${data?.danger_alerts ?? 0}` });
+      toast({ title: '✅ Manual fetch complete', description: `Fetched: ${data?.fetched ?? 0}, Alerts: ${data?.danger_alerts ?? 0}` });
       setLastAutoRun(new Date().toISOString());
-      // Refresh counts
       const { count } = await supabase.from('daily_prices').select('*', { count: 'exact', head: true }).eq('price_date', new Date().toISOString().split('T')[0]);
       setTodayRecords(count ?? 0);
     } catch (err: any) {
-      toast({ title: 'Cron run failed', description: err.message, variant: 'destructive' });
+      toast({ title: 'Fetch failed', description: err.message, variant: 'destructive' });
     } finally {
       setCronRunning(false);
     }
   };
 
-  // Compute auto-run status
+  const lastClientFetch = getLastDailyFetch();
   const getAutoRunStatus = () => {
-    if (!lastAutoRun) return { dot: 'bg-danger', label: 'Never run' };
-    const hours = (Date.now() - new Date(lastAutoRun).getTime()) / 3600000;
+    const ref = lastAutoRun || lastClientFetch;
+    if (!ref) return { dot: 'bg-danger', label: 'Never run' };
+    const hours = (Date.now() - new Date(ref).getTime()) / 3600000;
     if (hours < 25) return { dot: 'bg-success', label: 'Healthy' };
     if (hours < 48) return { dot: 'bg-warning', label: 'Delayed' };
     return { dot: 'bg-danger', label: 'Stale' };
@@ -184,9 +174,9 @@ const SettingsPage = () => {
               <span className={`w-2.5 h-2.5 rounded-full ${autoRunStatus.dot}`} />
               <span className="text-muted-foreground">Status: <strong className="text-foreground">{autoRunStatus.label}</strong></span>
             </div>
-            <p className="text-xs text-muted-foreground">Auto-fetch: Every day at 7:30 AM IST</p>
+            <p className="text-xs text-muted-foreground">Auto-fetch: Triggered on first daily app open (IST)</p>
             <p className="text-xs text-muted-foreground">
-              Last auto-run: <strong className="text-foreground">{lastAutoRun ? formatLastUpdated(lastAutoRun) : 'Never'}</strong>
+              Last fetch: <strong className="text-foreground">{lastClientFetch || (lastAutoRun ? formatLastUpdated(lastAutoRun) : 'Never')}</strong>
             </p>
             <p className="text-xs text-muted-foreground">
               Records fetched today: <strong className="text-foreground">{todayRecords}</strong>
@@ -269,30 +259,39 @@ const SettingsPage = () => {
         {/* Notifications */}
         <NotificationSettings />
 
-        {/* Data */}
+        {/* Telegram */}
+        <TelegramSettings />
+
+        {/* API Keys */}
+        <SecretStatusSection />
+
+        {/* System Health */}
+        <SystemHealthCheck />
+
+        {/* Data Export */}
+        <DataExportSection />
+
+        {/* Data Management */}
         <div className="bg-card rounded-lg shadow-sm p-4">
           <h2 className="text-sm font-bold mb-3">💾 Data Management</h2>
           <p className="text-xs text-muted-foreground mb-3">
             Database contains <strong className="text-foreground">{priceCount}</strong> price records spanning <strong className="text-foreground">{daySpan}</strong> days.
           </p>
-          <div className="flex gap-2 flex-wrap">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" className="text-xs">Clear All Cached Prices</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Clear all price data?</AlertDialogTitle>
-                  <AlertDialogDescription>This will permanently delete all {priceCount} price records. This action cannot be undone.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearPrices}>Yes, clear all</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <Button size="sm" variant="outline" className="text-xs" onClick={handleExportAll}>Export All Data as CSV</Button>
-          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="text-xs">Clear All Cached Prices</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all price data?</AlertDialogTitle>
+                <AlertDialogDescription>This will permanently delete all {priceCount} price records. This action cannot be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearPrices}>Yes, clear all</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </main>
       <BottomNav />

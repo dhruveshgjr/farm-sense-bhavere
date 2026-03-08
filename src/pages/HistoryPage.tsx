@@ -21,7 +21,6 @@ const HistoryPage = () => {
     );
   };
 
-  // Merge data for combined chart
   const dateMap = new Map<string, Record<string, number>>();
   prices.forEach(p => {
     const key = p.price_date;
@@ -55,11 +54,10 @@ const HistoryPage = () => {
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <AppHeader />
       <main className="container mx-auto px-3 py-4 max-w-2xl space-y-4">
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Highest Price', value: `₹${highest.toLocaleString()}`, sub: highestCrop?.commodity },
-            { label: 'Lowest Price', value: `₹${lowest.toLocaleString()}`, sub: lowestCrop?.commodity },
+            { label: 'Highest Price', value: highest ? `₹${highest.toLocaleString()}` : '—', sub: highestCrop?.commodity },
+            { label: 'Lowest Price', value: lowest ? `₹${lowest.toLocaleString()}` : '—', sub: lowestCrop?.commodity },
             { label: 'Total Records', value: prices.length.toString(), sub: 'data points' },
             { label: 'Days Tracked', value: uniqueDays.toString(), sub: 'unique days' },
           ].map(s => (
@@ -71,7 +69,6 @@ const HistoryPage = () => {
           ))}
         </div>
 
-        {/* Price Volatility */}
         <div className="bg-card rounded-lg shadow-sm p-3">
           <h3 className="text-xs font-bold mb-2">📊 Price Volatility (30-day)</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -87,7 +84,6 @@ const HistoryPage = () => {
           </div>
         </div>
 
-        {/* Year-on-Year */}
         <div className="bg-card rounded-lg shadow-sm p-3">
           <h3 className="text-xs font-bold mb-2">📅 Year-on-Year Comparison</h3>
           {uniqueDays < 365 ? (
@@ -103,7 +99,6 @@ const HistoryPage = () => {
           )}
         </div>
 
-        {/* Crop selector */}
         <div className="flex flex-wrap gap-3">
           {CROPS.map(crop => (
             <label key={crop.name} className="flex items-center gap-1.5 text-xs cursor-pointer">
@@ -117,13 +112,12 @@ const HistoryPage = () => {
           ))}
         </div>
 
-        {/* Combined chart */}
         <div className="bg-card rounded-lg shadow-sm overflow-hidden">
           <div className="section-header section-header-trends">📊 Price History — All Crops</div>
           <div className="p-3">
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
-            ) : chartData.length > 0 ? (
+            ) : chartData.length >= 7 ? (
               <div className="h-48 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
@@ -146,13 +140,18 @@ const HistoryPage = () => {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            ) : chartData.length > 0 ? (
+              <div className="h-48 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+                <span className="text-2xl mb-2">📊</span>
+                <span className="text-sm">Chart available after 7 days of price data</span>
+                <span className="text-xs mt-1">Currently: {chartData.length} days collected</span>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-12">No price history data yet. Fetch prices from the Dashboard first.</p>
             )}
           </div>
         </div>
 
-        {/* Table with Load More */}
         <div className="bg-card rounded-lg shadow-sm overflow-hidden">
           <div className="section-header section-header-market">📋 All Price Records</div>
           <div className="p-3 overflow-x-auto">

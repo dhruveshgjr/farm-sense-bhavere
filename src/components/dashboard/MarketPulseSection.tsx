@@ -50,10 +50,49 @@ function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodi
   );
 }
 
+function DataQualityBadge({ commodity, mandi, prices }: { commodity: string; mandi: string; prices: PriceRecord[] }) {
+  // Check if there's a valid price in the last 7 days
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const recent = prices.filter(p => p.commodity === commodity && p.mandi === mandi && new Date(p.price_date) >= sevenDaysAgo);
+  if (recent.length === 0 && prices.some(p => p.commodity === commodity && p.mandi === mandi)) {
+    return <span className="text-[9px] text-warning ml-1">⚠️ No recent data</span>;
+  }
+  return null;
+}
+
 export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetching, lastUpdated }: MarketPulseSectionProps) {
   const settings = getSettings();
   const filteredCrops = CROPS.filter(c => settings.enabledCrops.includes(c.commodityName));
   const filteredMandis = MANDIS.filter(m => settings.enabledMandis.includes(m));
+
+  if (isLoading) {
+    return (
+      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+        <div className="section-header section-header-market">💰 Market Pulse — Current Mandi Prices</div>
+        <div className="p-3">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-1"><Skeleton className="h-3 w-12" /></th>
+                {filteredMandis.map(m => <th key={m} className="text-right py-2 px-1"><Skeleton className="h-3 w-16 ml-auto" /></th>)}
+                <th className="text-center py-2 px-1"><Skeleton className="h-3 w-12 mx-auto" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-2 px-1"><Skeleton className="h-4 w-20" /><Skeleton className="h-2 w-12 mt-1" /></td>
+                  {filteredMandis.map((_, j) => <td key={j} className="text-right py-2 px-1"><Skeleton className="h-5 w-16 ml-auto" /></td>)}
+                  <td className="text-center py-2 px-1"><Skeleton className="h-4 w-16 mx-auto" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
@@ -84,9 +123,7 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                     const stale = price ? isStalePrice(price) : false;
                     return (
                       <td key={mandi} className="text-right py-2 px-1">
-                        {isLoading ? (
-                          <Skeleton className="h-5 w-16 ml-auto" />
-                        ) : price ? (
+                        {price ? (
                           <div>
                             <div className="font-bold flex items-center justify-end gap-1">
                               ₹{price.modal_price.toLocaleString()}
@@ -109,6 +146,7 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                             {price.arrivals_qtl && (
                               <div className="text-[9px] text-muted-foreground">📦 {price.arrivals_qtl}qtl</div>
                             )}
+                            <DataQualityBadge commodity={crop.commodityName} mandi={mandi} prices={prices} />
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-xs">No data</span>
