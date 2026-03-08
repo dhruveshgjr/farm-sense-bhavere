@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.seed-all-historical]
 verify_jwt = false
+
+[functions.daily-price-cron]
+verify_jwt = false

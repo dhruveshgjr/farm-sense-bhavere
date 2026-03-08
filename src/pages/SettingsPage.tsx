@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { formatLastUpdated } from '@/lib/timeFormat';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const SettingsPage = () => {
@@ -19,15 +20,37 @@ const SettingsPage = () => {
   const [seeding, setSeeding] = useState(false);
   const [seedProgress, setSeedProgress] = useState('');
   const [seedStep, setSeedStep] = useState(0);
+  const [lastAutoRun, setLastAutoRun] = useState<string | null>(null);
+  const [todayRecords, setTodayRecords] = useState(0);
+  const [cronRunning, setCronRunning] = useState(false);
 
   useEffect(() => {
-    supabase.from('daily_prices').select('price_date').then(({ data }) => {
+    async function load() {
+      const { data } = await supabase.from('daily_prices').select('price_date');
       if (data) {
         setPriceCount(data.length);
-        const unique = new Set(data.map(r => r.price_date));
-        setDaySpan(unique.size);
+        setDaySpan(new Set(data.map(r => r.price_date)).size);
       }
-    });
+
+      // Get last auto-run from report_history
+      const { data: reports } = await supabase
+        .from('report_history')
+        .select('generated_at, notes')
+        .order('generated_at', { ascending: false })
+        .limit(1);
+      if (reports?.[0]) {
+        setLastAutoRun(reports[0].generated_at);
+      }
+
+      // Today's records
+      const today = new Date().toISOString().split('T')[0];
+      const { count } = await supabase
+        .from('daily_prices')
+        .select('*', { count: 'exact', head: true })
+        .eq('price_date', today);
+      setTodayRecords(count ?? 0);
+    }
+    load();
   }, []);
 
   const update = (patch: Partial<FarmSettings>) => {
@@ -96,7 +119,6 @@ const SettingsPage = () => {
         } catch {}
       }
 
-      // Refresh counts
       const { data: refreshed } = await supabase.from('daily_prices').select('price_date');
       if (refreshed) {
         setPriceCount(refreshed.length);
@@ -113,6 +135,33 @@ const SettingsPage = () => {
     }
   };
 
+  const handleRunCron = async () => {
+    setCronRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('daily-price-cron', { method: 'POST' });
+      if (error) throw error;
+      toast({ title: '✅ Manual cron run complete', description: `Fetched: ${data?.fetched ?? 0}, Alerts: ${data?.danger_alerts ?? 0}` });
+      setLastAutoRun(new Date().toISOString());
+      // Refresh counts
+      const { count } = await supabase.from('daily_prices').select('*', { count: 'exact', head: true }).eq('price_date', new Date().toISOString().split('T')[0]);
+      setTodayRecords(count ?? 0);
+    } catch (err: any) {
+      toast({ title: 'Cron run failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setCronRunning(false);
+    }
+  };
+
+  // Compute auto-run status
+  const getAutoRunStatus = () => {
+    if (!lastAutoRun) return { dot: 'bg-danger', label: 'Never run' };
+    const hours = (Date.now() - new Date(lastAutoRun).getTime()) / 3600000;
+    if (hours < 25) return { dot: 'bg-success', label: 'Healthy' };
+    if (hours < 48) return { dot: 'bg-warning', label: 'Delayed' };
+    return { dot: 'bg-danger', label: 'Stale' };
+  };
+  const autoRunStatus = getAutoRunStatus();
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <AppHeader />
@@ -127,7 +176,28 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Historical Bootstrap - show only when < 100 records */}
+        {/* Automation Status */}
+        <div className="bg-card rounded-lg shadow-sm p-4">
+          <h2 className="text-sm font-bold mb-3">⏰ Automation Status</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${autoRunStatus.dot}`} />
+              <span className="text-muted-foreground">Status: <strong className="text-foreground">{autoRunStatus.label}</strong></span>
+            </div>
+            <p className="text-xs text-muted-foreground">Auto-fetch: Every day at 7:30 AM IST</p>
+            <p className="text-xs text-muted-foreground">
+              Last auto-run: <strong className="text-foreground">{lastAutoRun ? formatLastUpdated(lastAutoRun) : 'Never'}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records fetched today: <strong className="text-foreground">{todayRecords}</strong>
+            </p>
+            <Button size="sm" onClick={handleRunCron} disabled={cronRunning} className="text-xs mt-2">
+              {cronRunning ? 'Running...' : 'Run Now'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Historical Bootstrap */}
         {priceCount < 100 && (
           <div className="bg-info/10 border border-info rounded-lg p-4">
             <h2 className="text-sm font-bold mb-2">📥 Historical Data Bootstrap</h2>

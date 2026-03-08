@@ -8,6 +8,7 @@ import MarketPage from "./pages/MarketPage";
 import AdvisoryPage from "./pages/AdvisoryPage";
 import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
+import ReportPrint from "./pages/ReportPrint";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/advisory" element={<AdvisoryPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/report-print" element={<ReportPrint />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

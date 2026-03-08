@@ -3,7 +3,7 @@ import { getSettings } from '@/lib/settingsStore';
 export type PriceAlertLevel = 'RED' | 'YELLOW' | 'GREEN' | 'NORMAL' | 'NO_DATA';
 
 export function computeAlertLevel(currentPrice: number | null, avg90d: number | null): PriceAlertLevel {
-  if (!avg90d || !currentPrice) return 'NO_DATA';
+  if (!avg90d || !currentPrice || currentPrice <= 0) return 'NO_DATA';
   const settings = getSettings();
   const pct = ((currentPrice - avg90d) / avg90d) * 100;
   if (pct <= -settings.crashThreshold) return 'RED';
@@ -45,7 +45,8 @@ export function getSellSignal(
   alertLevel: PriceAlertLevel,
   seasonContext: 'HIGH' | 'LOW' | 'NEUTRAL'
 ): SellSignal {
-  if (!avg90d || !currentPrice) return { signal: 'NO DATA', color: 'grey', reason: 'Insufficient price data' };
+  if (!currentPrice || currentPrice <= 0) return { signal: 'NO DATA', color: 'grey', reason: 'No price data available' };
+  if (!avg90d) return { signal: 'NO DATA', color: 'grey', reason: 'Insufficient price history' };
 
   if (alertLevel === 'GREEN' && seasonContext === 'HIGH')
     return { signal: 'SELL NOW', color: 'green', reason: 'Price spike + peak season' };

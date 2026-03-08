@@ -11,17 +11,21 @@ export interface PriceRecord {
   modal_price: number;
   fetched_at: string;
   arrivals_qtl?: number | null;
+  source?: string | null;
 }
 
 export function usePrices() {
   return useQuery({
     queryKey: ['prices', 'latest'],
     queryFn: async (): Promise<PriceRecord[]> => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 90);
       const { data, error } = await supabase
         .from('daily_prices')
         .select('*')
+        .gte('price_date', thirtyDaysAgo.toISOString().split('T')[0])
         .order('price_date', { ascending: false })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return (data ?? []) as PriceRecord[];
     },
@@ -98,4 +102,10 @@ export function getAvgPrice(prices: PriceRecord[], commodity: string, days: numb
   const filtered = prices.filter(p => p.commodity === commodity && new Date(p.price_date) >= since);
   if (filtered.length === 0) return null;
   return filtered.reduce((sum, p) => sum + p.modal_price, 0) / filtered.length;
+}
+
+export function isStalePrice(record: PriceRecord): boolean {
+  if (!record.fetched_at) return true;
+  const age = Date.now() - new Date(record.fetched_at).getTime();
+  return age > 2 * 24 * 60 * 60 * 1000; // > 2 days
 }

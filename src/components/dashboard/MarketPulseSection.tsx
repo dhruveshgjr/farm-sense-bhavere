@@ -1,11 +1,12 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CROPS, MANDIS } from '@/lib/farmConfig';
-import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
+import { getLatestPrice, getAvgPrice, isStalePrice, type PriceRecord } from '@/hooks/usePrices';
 import { getSeasonalContext, getSellSignal, computeAlertLevel } from '@/lib/trendEngine';
 import { formatLastUpdated } from '@/lib/timeFormat';
 import { ManualPriceEntry } from './ManualPriceEntry';
 import { getSettings } from '@/lib/settingsStore';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MarketPulseSectionProps {
   prices: PriceRecord[];
@@ -67,7 +68,7 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                 {filteredMandis.map(m => (
                   <th key={m} className="text-right py-2 px-1 text-xs font-semibold">{m} (₹/qtl)</th>
                 ))}
-                <th className="text-center py-2 px-1 text-xs font-semibold">Season</th>
+                <th className="text-center py-2 px-1 text-xs font-semibold hidden sm:table-cell">Season</th>
                 <th className="text-center py-2 px-1 text-xs font-semibold">Signal</th>
               </tr>
             </thead>
@@ -80,13 +81,26 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                   </td>
                   {filteredMandis.map(mandi => {
                     const price = getLatestPrice(prices, crop.commodityName, mandi);
+                    const stale = price ? isStalePrice(price) : false;
                     return (
                       <td key={mandi} className="text-right py-2 px-1">
                         {isLoading ? (
                           <Skeleton className="h-5 w-16 ml-auto" />
                         ) : price ? (
                           <div>
-                            <div className="font-bold">₹{price.modal_price.toLocaleString()}</div>
+                            <div className="font-bold flex items-center justify-end gap-1">
+                              ₹{price.modal_price.toLocaleString()}
+                              {stale && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-[10px] cursor-help">ℹ️</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Price from {formatLastUpdated(price.fetched_at)} — may not reflect today's market</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                             <div className="text-[10px] text-muted-foreground hidden min-[400px]:block">
                               {price.min_price && price.max_price
                                 ? `₹${price.min_price}–${price.max_price}`
@@ -102,7 +116,7 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                       </td>
                     );
                   })}
-                  <td className="text-center py-2 px-1">
+                  <td className="text-center py-2 px-1 hidden sm:table-cell">
                     <SeasonBadge commodity={crop.commodityName} />
                   </td>
                   <td className="text-center py-2 px-1">
