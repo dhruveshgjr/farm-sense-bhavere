@@ -85,7 +85,7 @@ const TodayPage = () => {
 
   // Priority fallback chain
   const getTodaysPriority = () => {
-    if (aiPriority) return { text: aiPriority, source: 'ai' as const };
+    if (aiPriority) return { text: aiPriority, source: (prioritySource || 'smart') as 'ai' | 'smart' | 'danger' | 'warning' | 'clear' };
     const topDanger = sorted.find(a => a.level === 'DANGER');
     if (topDanger) return { text: `${topDanger.crop}: ${topDanger.action}`, source: 'danger' as const };
     const topWarning = sorted.find(a => a.level === 'WARNING');
@@ -96,6 +96,7 @@ const TodayPage = () => {
 
   const sourceBadge: Record<string, string> = {
     ai: t('today.aiGenerated'),
+    smart: t('smart_advisor_badge'),
     danger: t('today.criticalAlert'),
     warning: t('today.weatherWarning'),
     clear: t('today.clear'),
