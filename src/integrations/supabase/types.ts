@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_advice_cache: {
+        Row: {
+          advice_text: string
+          data_hash: string | null
+          generated_at: string | null
+          id: string
+        }
+        Insert: {
+          advice_text: string
+          data_hash?: string | null
+          generated_at?: string | null
+          id?: string
+        }
+        Update: {
+          advice_text?: string
+          data_hash?: string | null
+          generated_at?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       daily_prices: {
         Row: {
           arrivals_qtl: number | null
@@ -71,6 +92,39 @@ export type Database = {
           generated_at?: string | null
           id?: string
           notes?: string | null
+        }
+        Relationships: []
+      }
+      sowing_intel: {
+        Row: {
+          area_vs_lastyear_pct: number | null
+          commodity: string
+          district: string | null
+          id: string
+          notes: string | null
+          recorded_date: string | null
+          season: string
+          source: string | null
+        }
+        Insert: {
+          area_vs_lastyear_pct?: number | null
+          commodity: string
+          district?: string | null
+          id?: string
+          notes?: string | null
+          recorded_date?: string | null
+          season: string
+          source?: string | null
+        }
+        Update: {
+          area_vs_lastyear_pct?: number | null
+          commodity?: string
+          district?: string | null
+          id?: string
+          notes?: string | null
+          recorded_date?: string | null
+          season?: string
+          source?: string | null
         }
         Relationships: []
       }
