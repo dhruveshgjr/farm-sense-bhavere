@@ -9,6 +9,27 @@ const corsHeaders = {
 const CROPS = ['Banana', 'Tomato', 'Bitter Gourd', 'Papaya', 'Onion'];
 const MANDIS = ['Nashik', 'Lasalgaon'];
 
+const VALID_RANGES: Record<string, [number, number]> = {
+  'Tomato': [200, 8000],
+  'Onion': [300, 6000],
+  'Banana': [500, 4000],
+  'Papaya': [300, 3000],
+  'Bitter Gourd': [500, 5000],
+};
+
+function validatePrice(price: number, commodity: string): boolean {
+  if (!price || isNaN(price) || price <= 0) return false;
+  const range = VALID_RANGES[commodity];
+  if (!range) return price > 0 && price < 100000;
+  return price >= range[0] && price <= range[1];
+}
+
+function isDateRecent(dateStr: string, maxDays = 30): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (now.getTime() - d.getTime()) / 86400000 <= maxDays;
+}
+
 function delay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 function extractField(record: any, ...possibleKeys: string[]): string | null {
@@ -40,12 +61,12 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'DATAGOV_API_KEY not configured', success: 0, failed: 10, cached: 0, results: [] }), {
+      return new Response(JSON.stringify({ error: 'DATAGOV_API_KEY not configured', success: 0, failed: 10, cached: 0, skipped_invalid: 0, results: [] }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    let success = 0, failed = 0, cached = 0;
+    let success = 0, failed = 0, cached = 0, skippedInvalid = 0;
     const results: any[] = [];
 
     for (const commodity of CROPS) {
@@ -78,22 +99,39 @@ serve(async (req) => {
             return dateB.localeCompare(dateA);
           });
 
-          const record = sortedRecords[0];
-          const arrivalDate = extractField(record, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '';
-          const priceDate = parseDateFlexible(arrivalDate);
+          // Find first valid record
+          let upserted = false;
+          for (const record of sortedRecords) {
+            const arrivalDate = extractField(record, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '';
+            const priceDate = parseDateFlexible(arrivalDate);
+            const modalPrice = parseFloat(extractField(record, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0');
 
-          const priceRecord = {
-            price_date: priceDate, commodity, mandi,
-            min_price: parseFloat(extractField(record, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
-            max_price: parseFloat(extractField(record, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
-            modal_price: parseFloat(extractField(record, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0'),
-            arrivals_qtl: parseFloat(extractField(record, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
-            source: 'data.gov.in',
-          };
+            if (!isDateRecent(priceDate)) { skippedInvalid++; continue; }
+            if (!validatePrice(modalPrice, commodity)) { skippedInvalid++; continue; }
 
-          await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
-          success++;
-          results.push({ commodity, mandi, cached: false, data: priceRecord });
+            const priceRecord = {
+              price_date: priceDate, commodity, mandi,
+              min_price: parseFloat(extractField(record, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
+              max_price: parseFloat(extractField(record, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
+              modal_price: modalPrice,
+              arrivals_qtl: parseFloat(extractField(record, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
+              source: 'data.gov.in',
+            };
+
+            await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
+            success++;
+            results.push({ commodity, mandi, cached: false, data: priceRecord });
+            upserted = true;
+            break;
+          }
+
+          if (!upserted) {
+            const { data: cachedData } = await supabase.from('daily_prices').select('*')
+              .eq('commodity', commodity).eq('mandi', mandi)
+              .order('price_date', { ascending: false }).limit(1);
+            if (cachedData?.length) { cached++; } else { failed++; }
+            results.push({ commodity, mandi, error: 'No valid records', skipped: sortedRecords.length });
+          }
         } catch (e) {
           failed++;
           results.push({ commodity, mandi, error: e.message });
@@ -102,7 +140,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success, failed, cached, results }), {
+    return new Response(JSON.stringify({ success, failed, cached, skipped_invalid: skippedInvalid, results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.daily-price-cron]
 verify_jwt = false
+
+[functions.check-secrets]
+verify_jwt = false
+
+[functions.send-telegram-report]
+verify_jwt = false

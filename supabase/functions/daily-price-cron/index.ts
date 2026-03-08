@@ -9,6 +9,27 @@ const corsHeaders = {
 const CROPS = ['Banana', 'Tomato', 'Bitter Gourd', 'Papaya', 'Onion'];
 const MANDIS = ['Nashik', 'Lasalgaon'];
 
+const VALID_RANGES: Record<string, [number, number]> = {
+  'Tomato': [200, 8000],
+  'Onion': [300, 6000],
+  'Banana': [500, 4000],
+  'Papaya': [300, 3000],
+  'Bitter Gourd': [500, 5000],
+};
+
+function validatePrice(price: number, commodity: string): boolean {
+  if (!price || isNaN(price) || price <= 0) return false;
+  const range = VALID_RANGES[commodity];
+  if (!range) return price > 0 && price < 100000;
+  return price >= range[0] && price <= range[1];
+}
+
+function isDateRecent(dateStr: string, maxDays = 30): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (now.getTime() - d.getTime()) / 86400000 <= maxDays;
+}
+
 function delay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 function extractField(record: any, ...possibleKeys: string[]): string | null {
@@ -39,7 +60,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get('DATAGOV_API_KEY');
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    let fetched = 0, failed = 0, cached = 0;
+    let fetched = 0, failed = 0, cached = 0, skippedInvalid = 0;
     const results: any[] = [];
 
     for (const commodity of CROPS) {
@@ -75,22 +96,35 @@ serve(async (req) => {
             return dateB.localeCompare(dateA);
           });
 
-          const record = sortedRecords[0];
-          const arrivalDate = extractField(record, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '';
-          const priceDate = parseDateFlexible(arrivalDate);
+          let upserted = false;
+          for (const record of sortedRecords) {
+            const arrivalDate = extractField(record, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '';
+            const priceDate = parseDateFlexible(arrivalDate);
+            const modalPrice = parseFloat(extractField(record, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0');
 
-          const priceRecord = {
-            price_date: priceDate, commodity, mandi,
-            min_price: parseFloat(extractField(record, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
-            max_price: parseFloat(extractField(record, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
-            modal_price: parseFloat(extractField(record, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0'),
-            arrivals_qtl: parseFloat(extractField(record, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
-            source: 'data.gov.in',
-          };
+            if (!isDateRecent(priceDate)) { skippedInvalid++; continue; }
+            if (!validatePrice(modalPrice, commodity)) { skippedInvalid++; continue; }
 
-          await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
-          fetched++;
-          results.push({ commodity, mandi, cached: false, data: priceRecord });
+            const priceRecord = {
+              price_date: priceDate, commodity, mandi,
+              min_price: parseFloat(extractField(record, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
+              max_price: parseFloat(extractField(record, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
+              modal_price: modalPrice,
+              arrivals_qtl: parseFloat(extractField(record, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
+              source: 'data.gov.in',
+            };
+
+            await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
+            fetched++;
+            results.push({ commodity, mandi, cached: false, data: priceRecord });
+            upserted = true;
+            break;
+          }
+
+          if (!upserted) {
+            cached++;
+            results.push({ commodity, mandi, error: 'No valid records' });
+          }
         } catch (e) {
           failed++;
           results.push({ commodity, mandi, error: e.message });
@@ -99,12 +133,11 @@ serve(async (req) => {
       }
     }
 
-    // Check for danger alerts from weather
+    // Check for danger alerts
     let dangerAlerts = 0;
     let redPriceAlerts = 0;
 
     try {
-      // Check weather for danger conditions
       const { data: weather } = await supabase
         .from('weather_cache')
         .select('*')
@@ -120,7 +153,6 @@ serve(async (req) => {
         }
       }
 
-      // Check for RED price alerts
       for (const commodity of CROPS) {
         for (const mandi of MANDIS) {
           const { data: stats } = await supabase.rpc('get_price_stats', { p_commodity: commodity, p_mandi: mandi });
@@ -134,14 +166,28 @@ serve(async (req) => {
 
     // Log to report_history
     const notes = JSON.stringify({
-      fetched, failed, cached,
+      fetched, failed, cached, skipped_invalid: skippedInvalid,
       danger_alerts: dangerAlerts,
       red_price_alerts: redPriceAlerts,
       timestamp: new Date().toISOString(),
     });
     await supabase.from('report_history').insert({ notes });
 
-    return new Response(JSON.stringify({ fetched, failed, cached, danger_alerts: dangerAlerts, red_price_alerts: redPriceAlerts }), {
+    // Send Telegram report if configured
+    try {
+      const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+      const chatId = Deno.env.get('TELEGRAM_CHAT_ID');
+      if (botToken && chatId) {
+        const summary = `🌾 *KisanMitra Daily Update*\n📊 Prices: ${fetched} fetched, ${cached} cached, ${failed} failed\n⚠️ Danger alerts: ${dangerAlerts}\n🔴 Price crashes: ${redPriceAlerts}`;
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: summary, parse_mode: 'Markdown' }),
+        });
+      }
+    } catch {}
+
+    return new Response(JSON.stringify({ fetched, failed, cached, skipped_invalid: skippedInvalid, danger_alerts: dangerAlerts, red_price_alerts: redPriceAlerts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
