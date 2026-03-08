@@ -12,6 +12,7 @@ import { formatLastUpdated } from '@/lib/timeFormat';
 import { useLanguage } from '@/hooks/useLanguage';
 import { getSignalText, formatNumber } from '@/lib/i18n';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSmartAdvice } from '@/lib/smartAdvisor';
 
 const TodayPage = () => {
   const { t, language } = useLanguage();
@@ -19,18 +20,34 @@ const TodayPage = () => {
   const { data: prices = [] } = usePrices();
   const fetchMutation = useFetchPrices();
   const [aiPriority, setAiPriority] = useState<string | null>(null);
+  const [prioritySource, setPrioritySource] = useState<'ai' | 'smart' | null>(null);
 
   useEffect(() => { document.title = 'KisanMitra — Today\'s Brief'; }, []);
 
+  // Try AI cache first, then use Smart Advisor
   useEffect(() => {
     supabase.from('ai_advice_cache').select('advice_text').order('generated_at', { ascending: false }).limit(1)
       .then(({ data }) => {
         if (data?.[0]?.advice_text) {
           const match = data[0].advice_text.match(/TODAY'S PRIORITY:\s*(.+?)(?:\n|$)/i);
-          if (match) setAiPriority(match[1].trim());
+          if (match) {
+            setAiPriority(match[1].trim());
+            setPrioritySource('ai');
+            return;
+          }
+        }
+        // No AI cache — use Smart Advisor
+        if (weather) {
+          const allAlerts = getPrioritySummary(generateAllAdvisories(weather));
+          const month = new Date().getMonth() + 1;
+          const smart = generateSmartAdvice(weather, prices, allAlerts, month);
+          if (smart.todays_priority) {
+            setAiPriority(smart.todays_priority);
+            setPrioritySource('smart');
+          }
         }
       });
-  }, []);
+  }, [weather, prices]);
 
   const today = new Date();
   const dayName = today.toLocaleDateString(language === 'mr' ? 'mr-IN' : 'en-IN', { weekday: 'long' });
