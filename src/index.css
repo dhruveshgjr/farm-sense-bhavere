@@ -128,3 +128,43 @@
     border-color: hsl(var(--info));
   }
 }
+
+/* Print styles */
+@media print {
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  .print\\:static {
+    position: static !important;
+  }
+
+  .print\\:block {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12px;
+  }
+
+  .bg-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  nav[class*="fixed"] {
+    display: none !important;
+  }
+
+  main {
+    padding-bottom: 0 !important;
+  }
+
+  .section-header {
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
