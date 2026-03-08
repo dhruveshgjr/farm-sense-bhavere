@@ -1,13 +1,18 @@
 import { CROPS, MANDIS } from '@/lib/farmConfig';
 import { computeAlertLevel, computePctChange } from '@/lib/trendEngine';
 import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
+import { getSettings } from '@/lib/settingsStore';
 
 interface OpportunitiesSectionProps {
   prices: PriceRecord[];
   isLoading: boolean;
+  distinctDays?: number;
 }
 
-export function OpportunitiesSection({ prices, isLoading }: OpportunitiesSectionProps) {
+export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: OpportunitiesSectionProps) {
+  const settings = getSettings();
+  const filteredCrops = CROPS.filter(c => settings.enabledCrops.includes(c.commodityName));
+
   const opportunities: Array<{
     crop: string;
     mandi: string;
@@ -16,7 +21,7 @@ export function OpportunitiesSection({ prices, isLoading }: OpportunitiesSection
     level: string;
   }> = [];
 
-  for (const crop of CROPS) {
+  for (const crop of filteredCrops) {
     for (const mandi of MANDIS) {
       const latest = getLatestPrice(prices, crop.commodityName, mandi);
       const avg90 = getAvgPrice(prices, crop.commodityName, 90);
@@ -34,11 +39,17 @@ export function OpportunitiesSection({ prices, isLoading }: OpportunitiesSection
     }
   }
 
+  const hasEnoughData = distinctDays >= 30;
+
   return (
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="section-header section-header-opportunities">🎯 Market Opportunities & Alerts</div>
       <div className="p-3 space-y-2">
-        {opportunities.length === 0 ? (
+        {!hasEnoughData && prices.length > 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-3">
+            Trend analysis needs 30 days of data. Currently tracking {distinctDays} day{distinctDays !== 1 ? 's' : ''}.
+          </p>
+        ) : opportunities.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-3">
             All crop prices within normal historical range this week.
           </p>

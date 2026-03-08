@@ -1,20 +1,22 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWeatherEmoji } from '@/lib/farmConfig';
+import { formatLastUpdated } from '@/lib/timeFormat';
 import type { WeatherDay } from '@/hooks/useWeather';
 
 interface WeatherSectionProps {
   data?: WeatherDay[];
   isLoading: boolean;
+  lastFetched?: string | null;
 }
 
-export function WeatherSection({ data, isLoading }: WeatherSectionProps) {
+export function WeatherSection({ data, isLoading, lastFetched }: WeatherSectionProps) {
   if (isLoading) {
     return (
       <div className="bg-card rounded-lg shadow-sm overflow-hidden">
         <div className="section-header section-header-weather">🌤 10-Day Weather Forecast — Bhavere</div>
-        <div className="p-4 flex gap-3 overflow-x-auto">
+        <div className="p-4 flex gap-2 overflow-x-auto">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="min-w-[100px] h-[140px] rounded-lg" />
+            <Skeleton key={i} className="min-w-[72px] h-[140px] rounded-lg" />
           ))}
         </div>
       </div>
@@ -47,7 +49,7 @@ export function WeatherSection({ data, isLoading }: WeatherSectionProps) {
             return (
               <div
                 key={day.forecast_date}
-                className={`rounded-lg p-2.5 min-w-[90px] text-center ${cardClass}`}
+                className={`rounded-lg p-2.5 min-w-[72px] text-center ${cardClass}`}
               >
                 <div className="text-xs font-medium text-muted-foreground">{label}</div>
                 <div className="text-2xl my-1">{getWeatherEmoji(day.weathercode)}</div>
@@ -73,6 +75,11 @@ export function WeatherSection({ data, isLoading }: WeatherSectionProps) {
           <span>💨 Max wind: <strong>{maxWind}km/h</strong></span>
           <span>☔ Rainy days: <strong>{rainyDays}/7</strong></span>
         </div>
+        {lastFetched && (
+          <div className="text-[10px] text-muted-foreground mt-1 text-right">
+            Updated: {formatLastUpdated(lastFetched)}
+          </div>
+        )}
       </div>
     </div>
   );

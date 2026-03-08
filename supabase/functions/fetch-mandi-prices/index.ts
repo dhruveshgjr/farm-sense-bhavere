@@ -3,18 +3,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { commodity, mandi } = await req.json();
     const apiKey = Deno.env.get('DATAGOV_API_KEY');
-    
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -30,7 +30,11 @@ serve(async (req) => {
         .order('price_date', { ascending: false })
         .limit(1);
 
-      return new Response(JSON.stringify({ cached: true, data: cached?.[0] || null }), {
+      return new Response(JSON.stringify({
+        cached: true,
+        cache_note: 'API key not configured — showing last known price',
+        data: cached?.[0] || null,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -38,9 +42,9 @@ serve(async (req) => {
     const url = new URL('https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070');
     url.searchParams.set('api-key', apiKey);
     url.searchParams.set('format', 'json');
-    url.searchParams.set('limit', '5');
+    url.searchParams.set('limit', '10');
     url.searchParams.set('filters[State.keyword]', 'Maharashtra');
-    url.searchParams.set('filters[District]', mandi);
+    url.searchParams.set('filters[Market Name]', mandi);
     url.searchParams.set('filters[Commodity]', commodity);
 
     const res = await fetch(url.toString());
@@ -55,14 +59,26 @@ serve(async (req) => {
         .order('price_date', { ascending: false })
         .limit(1);
 
-      return new Response(JSON.stringify({ cached: true, data: cached?.[0] || null }), {
+      return new Response(JSON.stringify({
+        cached: true,
+        cache_note: 'Live fetch failed — showing last known price',
+        data: cached?.[0] || null,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const record = data.records[0];
+    // Sort by Arrival_Date descending, take the first record
+    const sortedRecords = data.records.sort((a: any, b: any) => {
+      const parseDate = (d: string) => {
+        const parts = d.split('/');
+        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+      };
+      return parseDate(b.Arrival_Date) - parseDate(a.Arrival_Date);
+    });
+
+    const record = sortedRecords[0];
     const arrivalDate = record.Arrival_Date;
-    // Parse DD/MM/YYYY format
     const parts = arrivalDate.split('/');
     const priceDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
 
@@ -70,9 +86,9 @@ serve(async (req) => {
       price_date: priceDate,
       commodity,
       mandi,
-      min_price: parseFloat(record.Min_x0020_Price) || null,
-      max_price: parseFloat(record.Max_x0020_Price) || null,
-      modal_price: parseFloat(record.Modal_x0020_Price),
+      min_price: parseFloat(record.Min_Price) || parseFloat(record.Min_x0020_Price) || null,
+      max_price: parseFloat(record.Max_Price) || parseFloat(record.Max_x0020_Price) || null,
+      modal_price: parseFloat(record.Modal_Price) || parseFloat(record.Modal_x0020_Price),
       source: 'data.gov.in',
     };
 

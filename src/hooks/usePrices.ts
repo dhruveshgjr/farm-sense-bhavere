@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CROPS, MANDIS } from '@/lib/farmConfig';
 
 export interface PriceRecord {
   id: string;
@@ -50,20 +49,43 @@ export function usePriceHistory(days: number = 90) {
   });
 }
 
+export interface FetchPricesResult {
+  success: number;
+  failed: number;
+  cached: number;
+  results: any[];
+  error?: string;
+}
+
 export function useFetchPrices() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<FetchPricesResult> => {
       const { data, error } = await supabase.functions.invoke('fetch-all-prices', {
         method: 'POST',
       });
       if (error) throw error;
-      return data;
+      return data as FetchPricesResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prices'] });
     },
+  });
+}
+
+export function useDistinctPriceDays() {
+  return useQuery({
+    queryKey: ['prices', 'distinct-days'],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from('daily_prices')
+        .select('price_date');
+      if (error) throw error;
+      const unique = new Set((data ?? []).map(r => r.price_date));
+      return unique.size;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 

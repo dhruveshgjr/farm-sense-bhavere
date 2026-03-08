@@ -38,11 +38,11 @@ function bananaRules(forecast: ForecastDay[]): CropAlert[] {
     }
   }
 
-  // Humidity streak
+  // Humidity streak — sliding window of 3 consecutive days
   for (let i = 0; i <= forecast.length - 3; i++) {
     if (forecast[i].humidity_max > 85 && forecast[i + 1].humidity_max > 85 && forecast[i + 2].humidity_max > 85) {
       alerts.push({ crop: 'Banana', level: 'WARNING', title: `High humidity streak starts ${fmtDate(forecast[i].forecast_date)}`, detail: `3+ consecutive days with humidity above 85%.`, action: 'Scout for Sigatoka leaf spot. Spray Mancozeb if symptoms appear.', day_date: forecast[i].forecast_date });
-      break;
+      break; // Only one alert
     }
   }
 
@@ -84,7 +84,7 @@ function karelaRules(forecast: ForecastDay[]): CropAlert[] {
       alerts.push({ crop: 'Bitter Gourd', level: 'WARNING', title: `Heavy rain ${day.rain_mm}mm — trellis and drainage check`, detail: `Heavy rain can damage trellis and waterlog beds.`, action: 'Check trellis anchors. Clear drainage around raised beds before this date.', day_date: day.forecast_date });
     }
   }
-  // Hot dry spell
+  // Hot dry spell — count all days (not necessarily consecutive) with temp_max > 38 AND rain_mm < 2
   let hotDryCount = 0;
   for (const day of forecast) {
     if (day.temp_max > 38 && day.rain_mm < 2) hotDryCount++;
@@ -142,6 +142,15 @@ export function generateAllAdvisories(forecast: ForecastDay[]): Record<string, C
 
 export function getPrioritySummary(allAlerts: Record<string, CropAlert[]>): CropAlert[] {
   const all = Object.values(allAlerts).flat();
+  // Deduplicate: same crop + same title → keep earliest
+  const seen = new Map<string, CropAlert>();
+  for (const alert of all) {
+    const key = `${alert.crop}::${alert.title}`;
+    if (!seen.has(key)) {
+      seen.set(key, alert);
+    }
+  }
+  const deduped = Array.from(seen.values());
   const order: Record<AlertLevel, number> = { DANGER: 0, WARNING: 1, INFO: 2 };
-  return all.sort((a, b) => order[a.level] - order[b.level]);
+  return deduped.sort((a, b) => order[a.level] - order[b.level]);
 }

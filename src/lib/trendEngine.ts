@@ -1,11 +1,14 @@
+import { getSettings } from '@/lib/settingsStore';
+
 export type PriceAlertLevel = 'RED' | 'YELLOW' | 'GREEN' | 'NORMAL' | 'NO_DATA';
 
 export function computeAlertLevel(currentPrice: number | null, avg90d: number | null): PriceAlertLevel {
   if (!avg90d || !currentPrice) return 'NO_DATA';
+  const settings = getSettings();
   const pct = ((currentPrice - avg90d) / avg90d) * 100;
-  if (pct <= -30) return 'RED';
-  if (pct <= -15) return 'YELLOW';
-  if (pct >= 30) return 'GREEN';
+  if (pct <= -settings.crashThreshold) return 'RED';
+  if (pct <= -(settings.crashThreshold / 2)) return 'YELLOW';
+  if (pct >= settings.spikeThreshold) return 'GREEN';
   return 'NORMAL';
 }
 

@@ -3,6 +3,7 @@ import { computeAlertLevel, computePctChange } from '@/lib/trendEngine';
 import { getAvgPrice, type PriceRecord, getLatestPrice } from '@/hooks/usePrices';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getSettings } from '@/lib/settingsStore';
 
 interface PriceTrendsSectionProps {
   prices: PriceRecord[];
@@ -16,15 +17,20 @@ function AlertBadge({ level }: { level: string }) {
     GREEN: 'bg-success text-primary-foreground',
     NORMAL: 'bg-muted text-muted-foreground',
     NO_DATA: 'bg-muted text-muted-foreground',
+    NO_HISTORY: 'bg-muted text-muted-foreground',
   };
+  const label = level === 'NO_HISTORY' ? 'NO HISTORY YET' : level;
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${styles[level] || styles.NORMAL}`}>
-      {level}
+      {label}
     </span>
   );
 }
 
 export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProps) {
+  const settings = getSettings();
+  const filteredCrops = CROPS.filter(c => settings.enabledCrops.includes(c.commodityName));
+
   if (isLoading) {
     return (
       <div className="bg-card rounded-lg shadow-sm overflow-hidden">
@@ -42,12 +48,14 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="section-header section-header-trends">📈 Price Trend Analysis</div>
       <div className="p-3 grid grid-cols-2 gap-2">
-        {CROPS.map(crop => {
+        {filteredCrops.map(crop => {
           const latest = getLatestPrice(prices, crop.commodityName, 'Nashik') ||
                          getLatestPrice(prices, crop.commodityName, 'Lasalgaon');
           const avg30 = getAvgPrice(prices, crop.commodityName, 30);
           const avg90 = getAvgPrice(prices, crop.commodityName, 90);
-          const alertLevel = computeAlertLevel(latest?.modal_price ?? null, avg90);
+
+          const hasHistory = avg90 !== null;
+          const alertLevel = hasHistory ? computeAlertLevel(latest?.modal_price ?? null, avg90) : 'NO_HISTORY';
           const pctChange = latest && avg30 ? computePctChange(latest.modal_price, avg30) : 0;
 
           const cropPrices = prices
@@ -69,9 +77,13 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
               {latest ? (
                 <div className="text-xs">
                   <span className="font-bold">₹{latest.modal_price.toLocaleString()}</span>
-                  <span className={`ml-1 ${pctChange >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {pctChange >= 0 ? '↑' : '↓'}{Math.abs(pctChange).toFixed(1)}%
-                  </span>
+                  {hasHistory ? (
+                    <span className={`ml-1 ${pctChange >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {pctChange >= 0 ? '↑' : '↓'}{Math.abs(pctChange).toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="ml-1 text-muted-foreground">vs —</span>
+                  )}
                 </div>
               ) : (
                 <div className="text-xs text-muted-foreground">No price data</div>
