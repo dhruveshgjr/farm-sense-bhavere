@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       daily_prices: {
         Row: {
+          arrivals_qtl: number | null
           commodity: string
           fetched_at: string | null
           id: string
@@ -28,6 +29,7 @@ export type Database = {
           unit: string | null
         }
         Insert: {
+          arrivals_qtl?: number | null
           commodity: string
           fetched_at?: string | null
           id?: string
@@ -40,6 +42,7 @@ export type Database = {
           unit?: string | null
         }
         Update: {
+          arrivals_qtl?: number | null
           commodity?: string
           fetched_at?: string | null
           id?: string
