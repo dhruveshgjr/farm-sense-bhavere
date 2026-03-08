@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_prices: {
+        Row: {
+          commodity: string
+          fetched_at: string | null
+          id: string
+          mandi: string
+          max_price: number | null
+          min_price: number | null
+          modal_price: number
+          price_date: string
+          source: string | null
+          unit: string | null
+        }
+        Insert: {
+          commodity: string
+          fetched_at?: string | null
+          id?: string
+          mandi: string
+          max_price?: number | null
+          min_price?: number | null
+          modal_price: number
+          price_date: string
+          source?: string | null
+          unit?: string | null
+        }
+        Update: {
+          commodity?: string
+          fetched_at?: string | null
+          id?: string
+          mandi?: string
+          max_price?: number | null
+          min_price?: number | null
+          modal_price?: number
+          price_date?: string
+          source?: string | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
       report_history: {
         Row: {
           generated_at: string | null
