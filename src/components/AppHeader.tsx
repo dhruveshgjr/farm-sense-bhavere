@@ -8,6 +8,8 @@ import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine'
 import { getWeatherEmoji } from '@/lib/farmConfig';
 import { computeAlertLevel, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 import { DataFreshnessIndicator } from '@/components/DataFreshnessIndicator';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface AppHeaderProps {
   onRefresh?: () => void;
@@ -18,10 +20,11 @@ interface AppHeaderProps {
 }
 
 const navItems = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/market', label: 'Market' },
-  { to: '/advisory', label: 'Advisory' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/', label: 'nav.today' },
+  { to: '/dashboard', label: 'nav.dashboard' },
+  { to: '/market', label: 'nav.market' },
+  { to: '/advisory', label: 'nav.advisory' },
+  { to: '/settings', label: 'nav.settings' },
 ];
 
 const CROP_EMOJI: Record<string, string> = {
@@ -98,6 +101,7 @@ function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): str
 }
 
 export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], weather }: AppHeaderProps) {
+  const { language, setLanguage, t } = useLanguage();
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -122,14 +126,15 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
               🌾 KisanMitra
             </h1>
             <p className="text-xs md:text-sm text-primary-foreground/80">
-              Bhavere Village, Nashik — Personal Farm Intelligence
+              {t('misc.bhavereNashik')} — Personal Farm Intelligence
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageToggle language={language} onToggle={setLanguage} />
             <DataFreshnessIndicator onRefresh={onRefresh} />
             <Button size="sm" variant="secondary" onClick={handlePrint} className="text-xs print:hidden">
               <FileText className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Report</span>
+              <span className="hidden sm:inline">{t('btn.generateReport')}</span>
             </Button>
             <Button size="sm" variant="secondary" onClick={handleShare} className="text-xs print:hidden">
               <Share2 className="h-3 w-3 mr-1" />
@@ -138,7 +143,7 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
             {onRefresh && (
               <Button size="sm" variant="secondary" onClick={onRefresh} disabled={isRefreshing} className="text-xs print:hidden">
                 <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? (refreshLabel || 'Fetching...') : 'Refresh'}
+                {isRefreshing ? (refreshLabel || 'Fetching...') : t('btn.refreshAll')}
               </Button>
             )}
           </div>
@@ -158,7 +163,7 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
                 }`
               }
             >
-              {item.label}
+              {t(item.label)}
             </NavLink>
           ))}
         </nav>

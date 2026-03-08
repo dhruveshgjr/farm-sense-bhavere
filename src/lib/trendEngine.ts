@@ -43,24 +43,40 @@ export function getSellSignal(
   currentPrice: number | null,
   avg90d: number | null,
   alertLevel: PriceAlertLevel,
-  seasonContext: 'HIGH' | 'LOW' | 'NEUTRAL'
+  seasonContext: 'HIGH' | 'LOW' | 'NEUTRAL',
+  sowingPct?: number | null
 ): SellSignal {
   if (!currentPrice || currentPrice <= 0) return { signal: 'NO DATA', color: 'grey', reason: 'No price data available' };
   if (!avg90d) return { signal: 'NO DATA', color: 'grey', reason: 'Insufficient price history' };
 
+  let result: SellSignal;
+
   if (alertLevel === 'GREEN' && seasonContext === 'HIGH')
-    return { signal: 'SELL NOW', color: 'green', reason: 'Price spike + peak season' };
-  if (alertLevel === 'GREEN' && seasonContext !== 'LOW')
-    return { signal: 'SELL NOW', color: 'green', reason: 'Price above average' };
-  if (alertLevel === 'RED' && seasonContext === 'LOW')
-    return { signal: 'FORCED SELL', color: 'red', reason: 'Price crash + off season' };
-  if (alertLevel === 'RED')
-    return { signal: 'WAIT', color: 'yellow', reason: 'Price dip — should recover' };
-  if (alertLevel === 'YELLOW')
-    return { signal: 'WAIT', color: 'yellow', reason: 'Price softening' };
-  if (seasonContext === 'HIGH')
-    return { signal: 'SELL NOW', color: 'green', reason: 'Peak season pricing' };
-  return { signal: 'HOLD', color: 'blue', reason: 'Price within normal range' };
+    result = { signal: 'SELL NOW', color: 'green', reason: 'Price spike + peak season' };
+  else if (alertLevel === 'GREEN' && seasonContext !== 'LOW')
+    result = { signal: 'SELL NOW', color: 'green', reason: 'Price above average' };
+  else if (alertLevel === 'RED' && seasonContext === 'LOW')
+    result = { signal: 'FORCED SELL', color: 'red', reason: 'Price crash + off season' };
+  else if (alertLevel === 'RED')
+    result = { signal: 'WAIT', color: 'yellow', reason: 'Price dip — should recover' };
+  else if (alertLevel === 'YELLOW')
+    result = { signal: 'WAIT', color: 'yellow', reason: 'Price softening' };
+  else if (seasonContext === 'HIGH')
+    result = { signal: 'SELL NOW', color: 'green', reason: 'Peak season pricing' };
+  else
+    result = { signal: 'HOLD', color: 'blue', reason: 'Price within normal range' };
+
+  // Sowing intel adjustments
+  if (sowingPct != null && sowingPct !== 0) {
+    if (sowingPct > 20 && result.signal === 'SELL NOW') {
+      result = { signal: 'HOLD', color: 'blue', reason: 'High supply expected at harvest — sell current stock now before new crop arrives' };
+    }
+    if (sowingPct < -20 && result.signal === 'HOLD') {
+      result = { signal: 'SELL NOW', color: 'green', reason: 'Shortage expected — prices should rise further, but secure current premium' };
+    }
+  }
+
+  return result;
 }
 
 export function computeVolatility(prices: number[]): { score: number; label: 'Low' | 'Medium' | 'High' } {
