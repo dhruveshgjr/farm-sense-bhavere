@@ -146,7 +146,7 @@ const TodayPage = () => {
                 <div className="text-[9px] text-muted-foreground">→ {bestCrop.mandi}</div>
               </>
             ) : (
-              <div className="text-[10px] text-muted-foreground">{hasPrices ? '—' : t('today.addApiKey')}</div>
+              <div className="text-[10px] text-muted-foreground">{hasPrices ? '—' : 'Fetch prices to see signals'}</div>
             )}
             <div className="text-[9px] text-muted-foreground mt-0.5">{t('today.bestSell')}</div>
           </div>
