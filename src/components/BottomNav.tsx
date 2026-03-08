@@ -1,19 +1,21 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, TrendingUp, Leaf, Settings, BarChart2 } from 'lucide-react';
+import { Home, TrendingUp, Leaf, Settings, FileText } from 'lucide-react';
 import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { t, getLanguage } from '@/lib/i18n';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Dashboard', emoji: '🏠' },
-  { to: '/market', icon: TrendingUp, label: 'Market', emoji: '💰' },
-  { to: '/advisory', icon: Leaf, label: 'Advisory', emoji: '🌱' },
-  { to: '/history', icon: BarChart2, label: 'History', emoji: '📊' },
-  { to: '/settings', icon: Settings, label: 'Settings', emoji: '⚙️' },
+  { to: '/', icon: FileText, label: 'nav.today', emoji: '📋' },
+  { to: '/dashboard', icon: Home, label: 'nav.dashboard', emoji: '🏠' },
+  { to: '/market', icon: TrendingUp, label: 'nav.market', emoji: '💰' },
+  { to: '/advisory', icon: Leaf, label: 'nav.advisory', emoji: '🌱' },
+  { to: '/settings', icon: Settings, label: 'nav.settings', emoji: '⚙️' },
 ];
 
 export function BottomNav() {
   const location = useLocation();
   const { data: weather } = useWeather();
+  const lang = getLanguage();
 
   let alertCount = 0;
   if (weather) {
@@ -38,7 +40,7 @@ export function BottomNav() {
               }`}
             >
               <span className="text-lg">{item.emoji}</span>
-              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{item.label}</span>
+              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{t(item.label, lang)}</span>
               {item.to === '/advisory' && alertCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-danger text-primary-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {alertCount > 9 ? '9+' : alertCount}

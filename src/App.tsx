@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import TodayPage from "./pages/TodayPage";
 import Index from "./pages/Index";
 import MarketPage from "./pages/MarketPage";
 import AdvisoryPage from "./pages/AdvisoryPage";
@@ -37,7 +38,8 @@ const App = () => (
       <CronInit />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/dashboard" element={<Index />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/advisory" element={<AdvisoryPage />} />
           <Route path="/history" element={<HistoryPage />} />
