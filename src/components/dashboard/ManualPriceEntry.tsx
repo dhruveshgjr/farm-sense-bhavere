@@ -14,7 +14,7 @@ import { PenLine } from 'lucide-react';
 
 function ManualPriceForm({ onClose }: { onClose: () => void }) {
   const [crop, setCrop] = useState(CROPS[0].commodityName);
-  const [mandi, setMandi] = useState(MANDIS[0]);
+  const [mandi, setMandi] = useState<string>(MANDIS[0]);
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
