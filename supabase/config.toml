@@ -1,1 +1,13 @@
 project_id = "wdjiwhijjhxjdmsayryk"
+
+[functions.fetch-mandi-prices]
+verify_jwt = false
+
+[functions.fetch-all-prices]
+verify_jwt = false
+
+[functions.seed-historical-prices]
+verify_jwt = false
+
+[functions.seed-all-historical]
+verify_jwt = false

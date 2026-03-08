@@ -6,14 +6,19 @@ import { getSettings, saveSettings, type FarmSettings } from '@/lib/settingsStor
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { NotificationSettings } from '@/components/NotificationSettings';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const SettingsPage = () => {
   const [settings, setSettingsState] = useState<FarmSettings>(getSettings());
   const [priceCount, setPriceCount] = useState(0);
   const [daySpan, setDaySpan] = useState(0);
+  const [seeding, setSeeding] = useState(false);
+  const [seedProgress, setSeedProgress] = useState('');
+  const [seedStep, setSeedStep] = useState(0);
 
   useEffect(() => {
     supabase.from('daily_prices').select('price_date').then(({ data }) => {
@@ -69,6 +74,45 @@ const SettingsPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleSeedHistory = async () => {
+    setSeeding(true);
+    setSeedStep(0);
+    try {
+      const combos = CROPS.flatMap(c => MANDIS.map(m => ({ commodity: c.commodityName, mandi: m })));
+      let totalInserted = 0;
+
+      for (let i = 0; i < combos.length; i++) {
+        const combo = combos[i];
+        setSeedProgress(`Fetching ${combo.commodity} at ${combo.mandi}... (${i + 1}/10)`);
+        setSeedStep(i + 1);
+
+        try {
+          const { data, error } = await supabase.functions.invoke('seed-historical-prices', {
+            body: { commodity: combo.commodity, mandi: combo.mandi, days: 90 },
+          });
+          if (!error && data?.inserted) {
+            totalInserted += data.inserted;
+          }
+        } catch {}
+      }
+
+      // Refresh counts
+      const { data: refreshed } = await supabase.from('daily_prices').select('price_date');
+      if (refreshed) {
+        setPriceCount(refreshed.length);
+        setDaySpan(new Set(refreshed.map(r => r.price_date)).size);
+      }
+
+      toast({ title: `✅ Loaded ${totalInserted} price records. Trend analysis is now active.` });
+      setSeedProgress(`✅ Historical data loaded. Check Dashboard for trend analysis.`);
+    } catch (err: any) {
+      toast({ title: 'Seed failed', description: err.message, variant: 'destructive' });
+      setSeedProgress('');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <AppHeader />
@@ -82,6 +126,25 @@ const SettingsPage = () => {
             <p>District: <strong className="text-foreground">{FARM.district}, {FARM.state}</strong></p>
           </div>
         </div>
+
+        {/* Historical Bootstrap - show only when < 100 records */}
+        {priceCount < 100 && (
+          <div className="bg-info/10 border border-info rounded-lg p-4">
+            <h2 className="text-sm font-bold mb-2">📥 Historical Data Bootstrap</h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Build 90 days of price history to enable trend analysis
+            </p>
+            {seedProgress && (
+              <div className="mb-3">
+                <p className="text-xs mb-1">{seedProgress}</p>
+                <Progress value={(seedStep / 10) * 100} className="h-2" />
+              </div>
+            )}
+            <Button size="sm" onClick={handleSeedHistory} disabled={seeding} className="text-xs">
+              {seeding ? 'Loading...' : 'Load 90-Day History'}
+            </Button>
+          </div>
+        )}
 
         {/* Tracked Crops */}
         <div className="bg-card rounded-lg shadow-sm p-4">
@@ -124,28 +187,17 @@ const SettingsPage = () => {
           <div className="space-y-4">
             <div>
               <label className="text-xs text-muted-foreground">Price crash alert at: <strong className="text-foreground">{settings.crashThreshold}%</strong> below 90-day average</label>
-              <Slider
-                value={[settings.crashThreshold]}
-                onValueChange={([v]) => update({ crashThreshold: v })}
-                min={10}
-                max={50}
-                step={5}
-                className="mt-2"
-              />
+              <Slider value={[settings.crashThreshold]} onValueChange={([v]) => update({ crashThreshold: v })} min={10} max={50} step={5} className="mt-2" />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Price spike alert at: <strong className="text-foreground">{settings.spikeThreshold}%</strong> above 90-day average</label>
-              <Slider
-                value={[settings.spikeThreshold]}
-                onValueChange={([v]) => update({ spikeThreshold: v })}
-                min={10}
-                max={50}
-                step={5}
-                className="mt-2"
-              />
+              <Slider value={[settings.spikeThreshold]} onValueChange={([v]) => update({ spikeThreshold: v })} min={10} max={50} step={5} className="mt-2" />
             </div>
           </div>
         </div>
+
+        {/* Notifications */}
+        <NotificationSettings />
 
         {/* Data */}
         <div className="bg-card rounded-lg shadow-sm p-4">

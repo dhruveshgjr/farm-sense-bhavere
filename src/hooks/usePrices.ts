@@ -10,6 +10,7 @@ export interface PriceRecord {
   max_price: number | null;
   modal_price: number;
   fetched_at: string;
+  arrivals_qtl?: number | null;
 }
 
 export function usePrices() {
@@ -21,11 +22,13 @@ export function usePrices() {
         .select('*')
         .order('price_date', { ascending: false })
         .limit(100);
-
       if (error) throw error;
       return (data ?? []) as PriceRecord[];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 4 * 60 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -35,17 +38,18 @@ export function usePriceHistory(days: number = 90) {
     queryFn: async (): Promise<PriceRecord[]> => {
       const since = new Date();
       since.setDate(since.getDate() - days);
-
       const { data, error } = await supabase
         .from('daily_prices')
         .select('*')
         .gte('price_date', since.toISOString().split('T')[0])
         .order('price_date', { ascending: true });
-
       if (error) throw error;
       return (data ?? []) as PriceRecord[];
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -59,12 +63,9 @@ export interface FetchPricesResult {
 
 export function useFetchPrices() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (): Promise<FetchPricesResult> => {
-      const { data, error } = await supabase.functions.invoke('fetch-all-prices', {
-        method: 'POST',
-      });
+      const { data, error } = await supabase.functions.invoke('fetch-all-prices', { method: 'POST' });
       if (error) throw error;
       return data as FetchPricesResult;
     },
@@ -78,9 +79,7 @@ export function useDistinctPriceDays() {
   return useQuery({
     queryKey: ['prices', 'distinct-days'],
     queryFn: async (): Promise<number> => {
-      const { data, error } = await supabase
-        .from('daily_prices')
-        .select('price_date');
+      const { data, error } = await supabase.from('daily_prices').select('price_date');
       if (error) throw error;
       const unique = new Set((data ?? []).map(r => r.price_date));
       return unique.size;
@@ -96,9 +95,7 @@ export function getLatestPrice(prices: PriceRecord[], commodity: string, mandi: 
 export function getAvgPrice(prices: PriceRecord[], commodity: string, days: number): number | null {
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const filtered = prices.filter(p =>
-    p.commodity === commodity && new Date(p.price_date) >= since
-  );
+  const filtered = prices.filter(p => p.commodity === commodity && new Date(p.price_date) >= since);
   if (filtered.length === 0) return null;
   return filtered.reduce((sum, p) => sum + p.modal_price, 0) / filtered.length;
 }

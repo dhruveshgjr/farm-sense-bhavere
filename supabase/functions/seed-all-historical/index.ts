@@ -30,6 +30,10 @@ function parseDateFlexible(dateStr: string): string {
   return new Date().toISOString().split('T')[0];
 }
 
+function formatDateForAPI(date: Date): string {
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -40,13 +44,18 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'DATAGOV_API_KEY not configured', success: 0, failed: 10, cached: 0, results: [] }), {
+      return new Response(JSON.stringify({ error: 'DATAGOV_API_KEY not configured' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    let success = 0, failed = 0, cached = 0;
+    const now = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 90);
+
     const results: any[] = [];
+    let totalInserted = 0;
+    let totalSkipped = 0;
 
     for (const commodity of CROPS) {
       for (const mandi of MANDIS) {
@@ -54,55 +63,53 @@ serve(async (req) => {
           const url = new URL('https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070');
           url.searchParams.set('api-key', apiKey);
           url.searchParams.set('format', 'json');
-          url.searchParams.set('limit', '10');
+          url.searchParams.set('limit', '500');
           url.searchParams.set('filters[State.keyword]', 'Maharashtra');
           url.searchParams.set('filters[Market Name]', mandi);
           url.searchParams.set('filters[Commodity]', commodity);
+          url.searchParams.set('filters[Arrival_Date_From]', formatDateForAPI(from));
+          url.searchParams.set('filters[Arrival_Date_To]', formatDateForAPI(now));
 
           const res = await fetch(url.toString());
           const data = await res.json();
 
-          if (!data.records || data.records.length === 0) {
-            const { data: cachedData } = await supabase.from('daily_prices').select('*')
-              .eq('commodity', commodity).eq('mandi', mandi)
-              .order('price_date', { ascending: false }).limit(1);
-            if (cachedData && cachedData.length > 0) { cached++; results.push({ commodity, mandi, cached: true, data: cachedData[0] }); }
-            else { failed++; results.push({ commodity, mandi, error: 'No data available' }); }
-            await delay(500);
-            continue;
+          let inserted = 0;
+          let skipped = 0;
+
+          if (data.records && data.records.length > 0) {
+            for (const rec of data.records) {
+              try {
+                const arrivalDate = extractField(rec, 'Arrival_Date', 'Arrival Date', 'arrival_date');
+                if (!arrivalDate) { skipped++; continue; }
+                const priceDate = parseDateFlexible(arrivalDate);
+                const modalPrice = parseFloat(extractField(rec, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0');
+                if (!modalPrice) { skipped++; continue; }
+
+                const { error } = await supabase.from('daily_prices').upsert({
+                  price_date: priceDate, commodity, mandi,
+                  min_price: parseFloat(extractField(rec, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
+                  max_price: parseFloat(extractField(rec, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
+                  modal_price: modalPrice,
+                  arrivals_qtl: parseFloat(extractField(rec, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
+                  source: 'data.gov.in',
+                }, { onConflict: 'price_date,commodity,mandi' });
+
+                if (error) skipped++; else inserted++;
+              } catch { skipped++; }
+            }
           }
 
-          const sortedRecords = data.records.sort((a: any, b: any) => {
-            const dateA = parseDateFlexible(extractField(a, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '');
-            const dateB = parseDateFlexible(extractField(b, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '');
-            return dateB.localeCompare(dateA);
-          });
-
-          const record = sortedRecords[0];
-          const arrivalDate = extractField(record, 'Arrival_Date', 'Arrival Date', 'arrival_date') ?? '';
-          const priceDate = parseDateFlexible(arrivalDate);
-
-          const priceRecord = {
-            price_date: priceDate, commodity, mandi,
-            min_price: parseFloat(extractField(record, 'Min_Price', 'Min Price', 'min_price') ?? '0') || null,
-            max_price: parseFloat(extractField(record, 'Max_Price', 'Max Price', 'max_price') ?? '0') || null,
-            modal_price: parseFloat(extractField(record, 'Modal_Price', 'Modal Price', 'modal_price') ?? '0'),
-            arrivals_qtl: parseFloat(extractField(record, 'Arrivals', 'arrivals', 'Arrival_Qty', 'Total Arrival') ?? '0') || null,
-            source: 'data.gov.in',
-          };
-
-          await supabase.from('daily_prices').upsert(priceRecord, { onConflict: 'price_date,commodity,mandi' });
-          success++;
-          results.push({ commodity, mandi, cached: false, data: priceRecord });
+          totalInserted += inserted;
+          totalSkipped += skipped;
+          results.push({ commodity, mandi, inserted, skipped });
         } catch (e) {
-          failed++;
           results.push({ commodity, mandi, error: e.message });
         }
-        await delay(500);
+        await delay(1000);
       }
     }
 
-    return new Response(JSON.stringify({ success, failed, cached, results }), {
+    return new Response(JSON.stringify({ totalInserted, totalSkipped, results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
