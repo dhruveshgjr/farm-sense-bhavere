@@ -1,9 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const SECRETS_TO_CHECK = ['DATAGOV_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'];
+const SECRETS_TO_CHECK = ['ANTHROPIC_API_KEY', 'DATAGOV_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'];
+
+const SECRET_LABELS: Record<string, { setLabel: string; unsetLabel: string }> = {
+  ANTHROPIC_API_KEY: {
+    setLabel: 'AI Advisor: Active (Direct Anthropic API)',
+    unsetLabel: 'AI Advisor: Not configured — add ANTHROPIC_API_KEY',
+  },
+  DATAGOV_API_KEY: { setLabel: 'Price API: Active', unsetLabel: 'Price API: Not configured' },
+  TELEGRAM_BOT_TOKEN: { setLabel: 'Telegram Bot: Active', unsetLabel: 'Telegram Bot: Not configured' },
+  TELEGRAM_CHAT_ID: { setLabel: 'Telegram Chat: Active', unsetLabel: 'Telegram Chat: Not configured' },
+};
 
 const SETUP_INSTRUCTIONS: Record<string, string[]> = {
+  ANTHROPIC_API_KEY: [
+    '1. Go to console.anthropic.com',
+    '2. Create account → API Keys → Create Key',
+    '3. Add as a Cloud secret named ANTHROPIC_API_KEY',
+    'Note: Using claude-haiku-4-5-20251001 — approx ₹0.02 per advice generation',
+  ],
   DATAGOV_API_KEY: [
     '1. Go to data.gov.in/user/register (free account)',
     '2. After login → API Key section → copy your key',
@@ -31,12 +47,8 @@ export function SecretStatusSection() {
         const { data, error } = await supabase.functions.invoke('check-secrets', {
           body: { keys: SECRETS_TO_CHECK },
         });
-        if (!error && data) {
-          setStatuses(data);
-        }
-      } catch {
-        // Edge function may not exist yet
-      }
+        if (!error && data) setStatuses(data);
+      } catch {}
       setLoading(false);
     }
     check();
@@ -51,12 +63,12 @@ export function SecretStatusSection() {
         <div className="space-y-3">
           {SECRETS_TO_CHECK.map(key => {
             const isSet = statuses[key] === true;
+            const labels = SECRET_LABELS[key];
             return (
               <div key={key}>
                 <div className="flex items-center gap-2 text-xs">
                   <span>{isSet ? '✅' : '❌'}</span>
-                  <span className="font-mono font-medium">{key}</span>
-                  <span className="text-muted-foreground">{isSet ? 'Set' : 'Not set'}</span>
+                  <span className="font-medium">{isSet ? labels?.setLabel : labels?.unsetLabel}</span>
                 </div>
                 {!isSet && SETUP_INSTRUCTIONS[key] && (
                   <div className="ml-6 mt-1 text-[10px] text-muted-foreground space-y-0.5">
