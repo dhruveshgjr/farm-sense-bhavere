@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-telegram-report]
 verify_jwt = false
+
+[functions.ai-advisor]
+verify_jwt = false
