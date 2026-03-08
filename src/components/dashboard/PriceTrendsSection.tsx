@@ -37,7 +37,11 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
         <div className="section-header section-header-trends">📈 Price Trend Analysis</div>
         <div className="p-4 grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <div key={i} className="border border-border rounded-lg p-2">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-3 w-16 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           ))}
         </div>
       </div>
@@ -89,7 +93,7 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
                 <div className="text-xs text-muted-foreground">No price data</div>
               )}
 
-              {cropPrices.length > 1 && (
+              {cropPrices.length >= 7 ? (
                 <div className="h-10 mt-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={cropPrices}>
@@ -103,7 +107,11 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              )}
+              ) : cropPrices.length > 0 ? (
+                <div className="h-10 mt-1 border border-dashed border-border rounded flex items-center justify-center">
+                  <span className="text-[9px] text-muted-foreground">📊 {cropPrices.length}/7 days</span>
+                </div>
+              ) : null}
             </div>
           );
         })}

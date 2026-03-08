@@ -12,11 +12,15 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
+import { StaleFetchBanner } from '@/components/StaleFetchBanner';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
-import { checkAndNotify } from '@/components/NotificationSettings';
+import { smartCheckAndNotify } from '@/lib/notificationManager';
+import { computeAlertLevel, computePctChange, getSeasonalContext } from '@/lib/trendEngine';
+import { CROPS, MANDIS } from '@/lib/farmConfig';
+import { getLatestPrice, getAvgPrice } from '@/hooks/usePrices';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
@@ -28,13 +32,11 @@ const Index = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  // Check onboarding state
   useEffect(() => {
     if (localStorage.getItem('kisanmitra_onboarded') === 'true') {
       setCheckingOnboarding(false);
       return;
     }
-    // Check if there's data
     async function check() {
       const [{ count: priceCount }, { count: weatherCount }] = await Promise.all([
         supabase.from('daily_prices').select('*', { count: 'exact', head: true }),
@@ -48,14 +50,32 @@ const Index = () => {
     check();
   }, []);
 
-  // Check for notifications on load
+  // Smart notifications
   useEffect(() => {
-    if (weather.data) {
-      const allAlerts = generateAllAdvisories(weather.data);
-      const sorted = getPrioritySummary(allAlerts);
-      checkAndNotify(sorted);
-    }
-  }, [weather.data]);
+    if (!weather.data || !prices.data) return;
+
+    const allAlerts = generateAllAdvisories(weather.data);
+    const sorted = getPrioritySummary(allAlerts);
+    const month = new Date().getMonth() + 1;
+
+    const trends = CROPS.flatMap(crop =>
+      MANDIS.map(mandi => {
+        const latest = getLatestPrice(prices.data!, crop.commodityName, mandi);
+        const avg90 = getAvgPrice(prices.data!, crop.commodityName, 90);
+        if (!latest || !avg90) return null;
+        const pct = computePctChange(latest.modal_price, avg90);
+        return {
+          alert_level: computeAlertLevel(latest.modal_price, avg90),
+          commodity: crop.commodityName,
+          mandi,
+          current_price: latest.modal_price,
+          pct_vs_90d: pct,
+        };
+      })
+    ).filter(Boolean) as any[];
+
+    smartCheckAndNotify(sorted, trends);
+  }, [weather.data, prices.data]);
 
   const handleRefresh = async () => {
     setRefreshLabel('Fetching weather + prices...');
@@ -107,6 +127,8 @@ const Index = () => {
 
       <main className="container mx-auto px-3 py-4 space-y-4 max-w-2xl">
         <QuickStatsStrip prices={prices.data ?? []} weather={weather.data} />
+
+        <StaleFetchBanner />
 
         {!hasPrices && !prices.isLoading && (
           <div className="bg-warning/20 border border-warning rounded-lg p-3 text-sm">

@@ -1,20 +1,29 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CROPS, MANDIS, getWeatherEmoji } from '@/lib/farmConfig';
 import { usePrices, getLatestPrice, getAvgPrice } from '@/hooks/usePrices';
 import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 import { computeAlertLevel, computePctChange, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ReportPrint = () => {
-  const { data: prices = [] } = usePrices();
-  const { data: weather } = useWeather();
+  const { data: prices = [], isLoading: pricesLoading } = usePrices();
+  const { data: weather, isLoading: weatherLoading } = useWeather();
+  const [printReady, setPrintReady] = useState(false);
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
   const month = new Date().getMonth() + 1;
 
+  const isLoading = pricesLoading || weatherLoading;
+
   useEffect(() => {
-    const timer = setTimeout(() => window.print(), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        setPrintReady(true);
+        window.print();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   const allAlerts = weather ? generateAllAdvisories(weather) : {};
   const sorted = getPrioritySummary(allAlerts);
@@ -23,8 +32,31 @@ const ReportPrint = () => {
   const totalRain = weekData.reduce((s, d) => s + d.rain_mm, 0);
   const rainyDays = weekData.filter(d => d.rain_mm > 1).length;
 
+  if (isLoading) {
+    return (
+      <div className="max-w-[210mm] mx-auto p-6">
+        <h1 className="text-xl font-bold text-center mb-4">Loading report data...</h1>
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[210mm] mx-auto p-6 text-foreground bg-background print:p-0">
+      <title>KisanMitra Report — {today} — Bhavere, Nashik</title>
+
+      {!printReady && (
+        <div className="no-print mb-4 text-center">
+          <button onClick={() => window.print()} className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">
+            Download as PDF
+          </button>
+        </div>
+      )}
+
       {/* Page 1 */}
       <div>
         <div className="text-center mb-6">
@@ -32,7 +64,6 @@ const ReportPrint = () => {
           <p className="text-sm text-muted-foreground">Bhavere, Nashik | {today}</p>
         </div>
 
-        {/* Weather */}
         <section className="mb-6">
           <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">🌤 Weather Forecast</h2>
           {weather && weather.length > 0 ? (
@@ -56,7 +87,6 @@ const ReportPrint = () => {
           )}
         </section>
 
-        {/* Market Pulse */}
         <section className="mb-6">
           <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">💰 Market Pulse — Mandi Prices</h2>
           <table className="w-full text-sm border-collapse">

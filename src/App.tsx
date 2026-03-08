@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportPrint from "./pages/ReportPrint";
 import NotFound from "./pages/NotFound";
+import { initClientCron } from "./lib/cronManager";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,11 +22,19 @@ const queryClient = new QueryClient({
   },
 });
 
+function CronInit() {
+  useEffect(() => {
+    initClientCron();
+  }, []);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CronInit />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
