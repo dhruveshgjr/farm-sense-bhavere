@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { CROPS } from '@/lib/farmConfig';
-import { usePriceHistory, type PriceRecord } from '@/hooks/usePrices';
+import { usePriceHistory } from '@/hooks/usePrices';
 import { computeVolatility } from '@/lib/trendEngine';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,11 +18,24 @@ const HistoryPage = () => {
   const [visibleRows, setVisibleRows] = useState(50);
   const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [aiAdviceMap, setAiAdviceMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     document.title = 'KisanMitra — Price History';
     supabase.from('report_history').select('*').order('generated_at', { ascending: false }).limit(100)
       .then(({ data }) => setReports(data ?? []));
+    // Load AI advice for timeline
+    supabase.from('ai_advice_cache').select('advice_text, generated_at').order('generated_at', { ascending: false }).limit(50)
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data ?? []).forEach(row => {
+          if (row.generated_at) {
+            const dateKey = new Date(row.generated_at).toISOString().split('T')[0];
+            if (!map[dateKey]) map[dateKey] = row.advice_text;
+          }
+        });
+        setAiAdviceMap(map);
+      });
   }, []);
 
   const toggleCrop = (commodity: string) => {
@@ -85,7 +98,7 @@ const HistoryPage = () => {
               <h3 className="text-xs font-bold mb-2">📊 Price Volatility (30-day)</h3>
               <div className="grid grid-cols-2 gap-2">
                 {volatilities.map(v => {
-                  const colorCls = v.label === 'High' ? 'text-danger' : v.label === 'Medium' ? 'text-warning' : 'text-success';
+                  const colorCls = v.label === 'High' ? 'text-destructive' : v.label === 'Medium' ? 'text-warning' : 'text-success';
                   return (
                     <div key={v.crop} className="flex items-center justify-between text-xs border border-border rounded px-2 py-1.5">
                       <span>{v.crop}</span>
@@ -179,14 +192,16 @@ const HistoryPage = () => {
             </div>
 
             {reports.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No reports yet. Reports are generated automatically on daily fetch.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No reports yet. Reports are generated automatically on daily fetch or manual refresh.</p>
             ) : (
               <div className="space-y-2">
                 {reports.map(report => {
                   let parsed: any = {};
                   try { parsed = JSON.parse(report.notes || '{}'); } catch {}
                   const date = new Date(report.generated_at);
+                  const dateKey = date.toISOString().split('T')[0];
                   const isSelected = selectedReport?.id === report.id;
+                  const hasAiAdvice = !!aiAdviceMap[dateKey];
 
                   return (
                     <div key={report.id}>
@@ -197,18 +212,37 @@ const HistoryPage = () => {
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm font-medium">{date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                            <div className="text-[10px] text-muted-foreground">{date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              {' · '}
+                              {parsed.trigger === 'manual' ? 'Manual refresh' : 'Auto (daily cron)'}
+                            </div>
                           </div>
-                          <div className="flex gap-2 text-xs">
-                            {parsed.danger_alerts > 0 && <span className="bg-danger/20 text-danger px-1.5 py-0.5 rounded-full">🔴 {parsed.danger_alerts}</span>}
-                            {parsed.red_price_alerts > 0 && <span className="bg-warning/20 text-foreground px-1.5 py-0.5 rounded-full">💰 {parsed.red_price_alerts}</span>}
-                            {parsed.fetched > 0 && <span className="text-muted-foreground">📊 {parsed.fetched} fetched</span>}
+                          <div className="flex gap-2 text-xs items-center">
+                            {parsed.danger_alerts > 0 && <span className="bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">🔴 {parsed.danger_alerts}</span>}
+                            {parsed.red_price_alerts > 0 && <span className="bg-warning/20 text-foreground px-1.5 py-0.5 rounded-full">📉 {parsed.red_price_alerts}</span>}
+                            {parsed.fetched > 0 && <span className="text-muted-foreground">📊 {parsed.fetched}</span>}
+                            {hasAiAdvice && <span className="text-[10px] text-info">🤖</span>}
                           </div>
                         </div>
+                        {parsed.top_alert && (
+                          <p className="text-[10px] text-muted-foreground mt-1">Top issue: {parsed.top_alert}</p>
+                        )}
                       </button>
                       {isSelected && (
-                        <div className="bg-muted rounded-lg p-3 mt-1 text-xs">
-                          <pre className="whitespace-pre-wrap text-muted-foreground">{JSON.stringify(parsed, null, 2)}</pre>
+                        <div className="bg-muted rounded-lg p-3 mt-1 text-xs space-y-2">
+                          <div className="grid grid-cols-2 gap-2 text-[10px]">
+                            <span>🔴 Danger alerts: {parsed.danger_alerts ?? 0}</span>
+                            <span>📉 Price crashes: {parsed.red_price_alerts ?? 0}</span>
+                            <span>🌾 Crops with data: {parsed.crops_with_data ?? '—'}</span>
+                            <span>🔧 Trigger: {parsed.trigger || 'auto'}</span>
+                          </div>
+                          {hasAiAdvice && (
+                            <div className="border-t border-border pt-2">
+                              <p className="text-[10px] font-bold mb-1">🤖 AI Advice</p>
+                              <p className="text-[10px] text-muted-foreground whitespace-pre-line">{aiAdviceMap[dateKey]}</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

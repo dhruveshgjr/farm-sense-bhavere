@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Home, TrendingUp, Leaf, Settings, FileText } from 'lucide-react';
 import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
-import { t, getLanguage } from '@/lib/i18n';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const navItems = [
   { to: '/', icon: FileText, label: 'nav.today', emoji: '📋' },
@@ -15,7 +15,7 @@ const navItems = [
 export function BottomNav() {
   const location = useLocation();
   const { data: weather } = useWeather();
-  const lang = getLanguage();
+  const { t } = useLanguage();
 
   let alertCount = 0;
   if (weather) {
@@ -40,9 +40,9 @@ export function BottomNav() {
               }`}
             >
               <span className="text-lg">{item.emoji}</span>
-              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{t(item.label, lang)}</span>
+              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{t(item.label)}</span>
               {item.to === '/advisory' && alertCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-danger text-primary-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {alertCount > 9 ? '9+' : alertCount}
                 </span>
               )}

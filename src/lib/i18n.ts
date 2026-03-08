@@ -1,4 +1,4 @@
-type Lang = 'en' | 'mr';
+export type Lang = 'en' | 'mr';
 
 const translations: Record<string, Record<Lang, string>> = {
   // Navigation
@@ -83,7 +83,7 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // Today page
   'today.priority': { en: "Today's Priority", mr: 'आजचे प्राधान्य' },
-  'today.clearDay': { en: 'Clear day — normal farm operations', mr: 'सामान्य दिवस — नेहमीची शेती कामे' },
+  'today.clearDay': { en: 'No critical actions today — normal farm operations', mr: 'आज कोणतीही महत्त्वाची कामे नाहीत — सामान्य शेती कामे' },
   'today.weatherToday': { en: 'Weather Today', mr: 'आजचे हवामान' },
   'today.bestSell': { en: 'Best Sell Today', mr: 'आज सर्वोत्तम विक्री' },
   'today.topAlert': { en: 'Top Alert', mr: 'मुख्य इशारा' },
@@ -93,10 +93,21 @@ const translations: Record<string, Record<Lang, string>> = {
   'today.allAdvisories': { en: 'All Advisories', mr: 'सर्व सल्ले' },
   'today.shareReport': { en: 'Share Report', mr: 'अहवाल शेअर करा' },
   'today.lastUpdated': { en: 'Last updated', mr: 'शेवटचे अपडेट' },
+  'today.aiGenerated': { en: '🤖 AI generated', mr: '🤖 AI निर्मित' },
+  'today.criticalAlert': { en: '🔴 Critical alert', mr: '🔴 गंभीर इशारा' },
+  'today.weatherWarning': { en: '🟡 Weather warning', mr: '🟡 हवामान इशारा' },
+  'today.clear': { en: '✅ Clear', mr: '✅ सामान्य' },
+  'today.addApiKey': { en: 'Add DATAGOV_API_KEY to see sell signals', mr: 'विक्री सिग्नल पाहण्यासाठी DATAGOV_API_KEY जोडा' },
 
   // Misc
   'misc.bhavereNashik': { en: 'Bhavere, Nashik', mr: 'भावेरे, नाशिक' },
   'misc.noData': { en: 'No data', mr: 'माहिती नाही' },
+
+  // Setup banners
+  'setup.needApiKey': { en: '⚠️ KisanMitra needs setup: Add DATAGOV_API_KEY to get live mandi prices', mr: '⚠️ KisanMitra सेटअप आवश्यक: थेट मंडी भावांसाठी DATAGOV_API_KEY जोडा' },
+  'setup.openSettings': { en: 'Open Settings →', mr: 'सेटिंग्ज उघडा →' },
+  'setup.needHistory': { en: '📊 No price history yet. Go to Settings → Load 90-Day History to activate trend analysis and sell signals.', mr: '📊 किंमत इतिहास नाही. सेटिंग्ज → ९०-दिवसीय इतिहास लोड करा.' },
+  'setup.goToSettings': { en: 'Go to Settings →', mr: 'सेटिंग्ज वर जा →' },
 };
 
 export function t(key: string, lang?: Lang): string {
@@ -140,4 +151,12 @@ export function getSeasonText(season: string, lang?: Lang): string {
   return map[season] || season;
 }
 
-export type { Lang };
+export function formatNumber(n: number, lang?: Lang): string {
+  const l = lang || getLanguage();
+  if (l === 'en') return n.toLocaleString('en-IN');
+  const devanagari = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+  return n.toLocaleString('en-IN')
+    .split('')
+    .map(c => /\d/.test(c) ? devanagari[parseInt(c)] : c)
+    .join('');
+}

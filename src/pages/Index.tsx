@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { WeatherSection } from '@/components/dashboard/WeatherSection';
@@ -10,6 +10,7 @@ import { PriceAlertBanner } from '@/components/dashboard/PriceAlertBanner';
 import { QuickStatsStrip } from '@/components/dashboard/QuickStatsStrip';
 import { AIAdvisorSection } from '@/components/dashboard/AIAdvisorSection';
 import { SupplyIntelSection } from '@/components/dashboard/SupplyIntelSection';
+import { SetupBanner } from '@/components/SetupBanner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
@@ -81,7 +82,7 @@ const Index = () => {
       const alertLevel = computeAlertLevel(latest.modal_price, avg90);
       const season = getSeasonalContext(crop.commodityName, month);
       const signal = getSellSignal(latest.modal_price, avg90, alertLevel, season.season);
-      return { commodity: crop.commodityName, mandi, current_price: latest.modal_price, pct_vs_90d: computePctChange(latest.modal_price, avg90), sell_signal: signal.signal };
+      return { commodity: crop.commodityName, mandi, current_price: latest.modal_price, pct_vs_90d: computePctChange(latest.modal_price, avg90), sell_signal: signal.signal, alert_level: alertLevel };
     })
   ).filter(Boolean) as any[] : [];
 
@@ -92,6 +93,20 @@ const Index = () => {
     try {
       await weather.refetch();
       const result = await fetchPricesMutation.mutateAsync();
+
+      // Log to report_history
+      const dangerCount = allAlerts.filter(a => a.level === 'DANGER').length;
+      const redCount = trendData.filter((t: any) => t.alert_level === 'RED').length;
+      await supabase.from('report_history').insert({
+        notes: JSON.stringify({
+          trigger: 'manual',
+          danger_alerts: dangerCount,
+          red_price_alerts: redCount,
+          crops_with_data: new Set(prices.data?.map(p => p.commodity) || []).size,
+          top_alert: allAlerts[0]?.title || null,
+        })
+      });
+
       if (result.error) {
         toast({ title: '⚠️ Price fetch failed', description: 'API key not configured.', variant: 'destructive' });
       } else {
@@ -113,6 +128,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
+      <SetupBanner />
       <InstallBanner />
       <OfflineBanner />
       <AppHeader onRefresh={handleRefresh} isRefreshing={weather.isFetching || fetchPricesMutation.isPending} refreshLabel={refreshLabel} prices={prices.data ?? []} weather={weather.data} />

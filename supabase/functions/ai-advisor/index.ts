@@ -11,134 +11,117 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+
+  if (!ANTHROPIC_API_KEY) {
+    return new Response(JSON.stringify({
+      advice: null,
+      fallback: true,
+      reason: 'ANTHROPIC_API_KEY not configured',
+      generated_at: new Date().toISOString()
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'AI not configured' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const body = await req.json();
+    const { forecast, prices, trends, alerts, currentMonth } = body;
 
-    const { forecast, prices, trends, alerts, opportunities, currentMonth } = await req.json();
+    const totalRain = forecast?.reduce((s: number, d: any) => s + (d.rain_mm || 0), 0) || 0;
+    const maxTemp = Math.max(...(forecast?.map((d: any) => d.temp_max || 0) || [0]));
+    const rainyDays = forecast?.filter((d: any) => (d.rain_mm || 0) > 5).length || 0;
+    const maxWind = Math.max(...(forecast?.map((d: any) => d.wind_kmh || 0) || [0]));
 
-    const systemPrompt = `You are KisanMitra, a personal farm intelligence assistant for a small family farm in Bhavere village, Nashik district, Maharashtra, India.
-The farm is water-rich (near a river) and grows: Banana, Tomato, Bitter Gourd (Karela), Papaya, and Onion.
-The mandis used are Nashik and Lasalgaon.
-You speak like a knowledgeable local advisor — practical, direct, no unnecessary hedging. Use simple English mixed with Marathi crop/market terms where natural (e.g., 'mandi', 'quintal', 'kharif', 'rabi').
-Never say 'I cannot predict' — give your best assessment with reasoning.
-Always end with ONE clear priority action the farmer should take TODAY.`;
+    const priceLines = (trends || [])
+      .filter((t: any) => t.current_price)
+      .map((t: any) => {
+        const pct = t.pct_vs_90d ? `${t.pct_vs_90d > 0 ? '+' : ''}${t.pct_vs_90d.toFixed(1)}% vs 90d avg` : 'no history';
+        return `${t.commodity} at ${t.mandi}: ₹${t.current_price}/qtl (${pct}) — Signal: ${t.sell_signal || 'NORMAL'}`;
+      }).join('\n');
 
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const monthName = monthNames[(currentMonth || new Date().getMonth() + 1) - 1];
+    const dangerAlerts = (alerts || []).filter((a: any) => a.level === 'DANGER');
+    const warningAlerts = (alerts || []).filter((a: any) => a.level === 'WARNING');
+    const alertLines = [
+      ...dangerAlerts.map((a: any) => `🔴 ${a.crop}: ${a.title} → ${a.action}`),
+      ...warningAlerts.slice(0, 3).map((a: any) => `🟡 ${a.crop}: ${a.title}`)
+    ].join('\n') || 'No significant alerts';
 
-    let weatherSection = 'No weather data available.';
-    if (forecast?.length) {
-      weatherSection = forecast.slice(0, 10).map((d: any) =>
-        `${d.forecast_date}: ${d.temp_min}-${d.temp_max}°C, Rain: ${d.rain_mm}mm, Humidity: ${d.humidity_max}%, Wind: ${d.wind_kmh}km/h`
-      ).join('\n');
-    }
+    const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
 
-    let priceSection = 'No price data available.';
-    if (prices?.length) {
-      const cropPrices: Record<string, string[]> = {};
-      for (const p of prices.slice(0, 20)) {
-        if (!cropPrices[p.commodity]) cropPrices[p.commodity] = [];
-        cropPrices[p.commodity].push(`${p.mandi}: ₹${p.modal_price}/qtl`);
-      }
-      priceSection = Object.entries(cropPrices).map(([c, ps]) => `${c} — ${ps.join(', ')}`).join('\n');
-    }
+    const systemPrompt = `You are KisanMitra, a personal farm intelligence assistant for a small family farm in Bhavere village, Nashik district, Maharashtra, India. The farm is water-rich (near a river) and grows: Banana (केळ), Tomato (टोमॅटो), Bitter Gourd/Karela (करेला), Papaya (पपई), and Onion (कांदा). The mandis used are Nashik and Lasalgaon. You speak like a knowledgeable local advisor — practical, direct, no unnecessary hedging. Use simple English with natural Marathi market terms (mandi, quintal, kharif, rabi) where appropriate. Never say you cannot predict — give your best assessment with clear reasoning. The farmer's ultimate goal is to know what the market will pay BEFORE planting, and sell at the right time.`;
 
-    let alertSection = 'No active alerts.';
-    if (alerts?.length) {
-      alertSection = alerts.slice(0, 10).map((a: any) => `[${a.level}] ${a.crop}: ${a.title} — Action: ${a.action}`).join('\n');
-    }
+    const userMessage = `Here is today's farm data for ${MONTH_NAMES[currentMonth] || 'this month'}. Generate a focused weekly advisory.
 
-    let trendSection = 'No trend data.';
-    if (trends?.length) {
-      trendSection = trends.map((t: any) => `${t.commodity}@${t.mandi}: ₹${t.current_price}, ${t.pct_vs_90d > 0 ? '+' : ''}${t.pct_vs_90d?.toFixed(1)}% vs 90d avg, Signal: ${t.sell_signal}`).join('\n');
-    }
+WEATHER (10-day): Total rain ${totalRain.toFixed(0)}mm, ${rainyDays} rainy days, max temp ${maxTemp}°C, max wind ${maxWind}km/h
 
-    const userMessage = `Here is today's farm data. Generate a comprehensive weekly advisory.
+MANDI PRICES:
+${priceLines || 'No price data available yet'}
 
-WEATHER (next 10 days):
-${weatherSection}
+CROP ALERTS:
+${alertLines}
 
-CURRENT MANDI PRICES:
-${priceSection}
+Generate exactly this structure (use these exact headers):
+WEATHER RISK: [2 sentences — overall risk level and most important weather event]
+MARKET INTELLIGENCE: [3 sentences — what prices are doing, which crop to sell, which to hold]
+TOP 3 ACTIONS:
+1. [specific action with timing]
+2. [specific action with timing]
+3. [specific action with timing]
+TODAY'S PRIORITY: [one sentence — single most important thing to do today]
 
-PRICE SIGNALS:
-${trendSection}
+Keep total under 350 words. Be specific to Nashik/Maharashtra context.`;
 
-CROP ALERTS FROM RULES ENGINE:
-${alertSection}
-
-SEASONAL CONTEXT:
-Current month: ${monthName}
-
-Generate:
-1. WEATHER RISK SUMMARY (2-3 sentences, overall risk level this week)
-2. MARKET INTELLIGENCE (3-4 sentences: what prices are doing, what to sell, what to hold)
-3. TOP 3 ACTIONS THIS WEEK (numbered, specific, with timing)
-4. TODAY'S PRIORITY (one sentence, the single most important thing to do today)
-
-Keep total response under 400 words. Be specific to Nashik/Maharashtra context.`;
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 600,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      }),
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }]
+      })
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('AI gateway error:', response.status, errText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limited, try again later' }), {
-          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'AI credits exhausted' }), {
-          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      return new Response(JSON.stringify({ error: 'AI generation failed' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      console.error('Anthropic API error:', response.status, errText);
+      throw new Error(`Anthropic API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const adviceText = data.content?.[0]?.text || '';
+
+    // Cache in ai_advice_cache table
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await supabase.from('ai_advice_cache').insert({
+        advice_text: adviceText,
+        data_hash: new Date().toISOString().split('T')[0],
       });
     }
 
-    const aiResult = await response.json();
-    const adviceText = aiResult.choices?.[0]?.message?.content || 'No advice generated.';
-
-    // Cache in database
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    await supabase.from('ai_advice_cache').insert({
-      advice_text: adviceText,
-      data_hash: new Date().toISOString().split('T')[0],
-    });
-
     return new Response(JSON.stringify({
       advice: adviceText,
-      generated_at: new Date().toISOString(),
+      fallback: false,
+      generated_at: new Date().toISOString()
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+  } catch (error) {
+    console.error('ai-advisor error:', error);
+    return new Response(JSON.stringify({
+      advice: null,
+      fallback: true,
+      reason: (error as Error).message,
+      generated_at: new Date().toISOString()
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    console.error('ai-advisor error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });

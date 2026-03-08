@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CROPS, MANDIS } from '@/lib/farmConfig';
@@ -6,6 +7,7 @@ import { getSeasonalContext, getSellSignal, computeAlertLevel } from '@/lib/tren
 import { formatLastUpdated } from '@/lib/timeFormat';
 import { ManualPriceEntry } from './ManualPriceEntry';
 import { getSettings } from '@/lib/settingsStore';
+import { getSignalText, getLanguage } from '@/lib/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MarketPulseSectionProps {
@@ -16,17 +18,6 @@ interface MarketPulseSectionProps {
   lastUpdated?: string;
 }
 
-function SeasonBadge({ commodity }: { commodity: string }) {
-  const month = new Date().getMonth() + 1;
-  const ctx = getSeasonalContext(commodity, month);
-  const cls = ctx.season === 'HIGH'
-    ? 'bg-success/20 text-success'
-    : ctx.season === 'LOW'
-    ? 'bg-danger/20 text-danger'
-    : 'bg-muted text-muted-foreground';
-  return <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${cls}`}>{ctx.season}</span>;
-}
-
 function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodity: string }) {
   const latest = getLatestPrice(prices, commodity, 'Nashik') || getLatestPrice(prices, commodity, 'Lasalgaon');
   const avg90 = getAvgPrice(prices, commodity, 90);
@@ -34,24 +25,24 @@ function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodi
   const month = new Date().getMonth() + 1;
   const season = getSeasonalContext(commodity, month);
   const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
+  const lang = getLanguage();
 
   const colorMap: Record<string, string> = {
     green: 'bg-success/20 text-success',
     blue: 'bg-info/20 text-info',
     yellow: 'bg-warning/20 text-foreground',
-    red: 'bg-danger/20 text-danger',
+    red: 'bg-destructive/20 text-destructive',
     grey: 'bg-muted text-muted-foreground',
   };
 
   return (
     <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${colorMap[signal.color]}`}>
-      {signal.signal}
+      {getSignalText(signal.signal, lang)}
     </span>
   );
 }
 
 function DataQualityBadge({ commodity, mandi, prices }: { commodity: string; mandi: string; prices: PriceRecord[] }) {
-  // Check if there's a valid price in the last 7 days
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const recent = prices.filter(p => p.commodity === commodity && p.mandi === mandi && new Date(p.price_date) >= sevenDaysAgo);
@@ -61,7 +52,7 @@ function DataQualityBadge({ commodity, mandi, prices }: { commodity: string; man
   return null;
 }
 
-export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetching, lastUpdated }: MarketPulseSectionProps) {
+export const MarketPulseSection = memo(function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetching, lastUpdated }: MarketPulseSectionProps) {
   const settings = getSettings();
   const filteredCrops = CROPS.filter(c => settings.enabledCrops.includes(c.commodityName));
   const filteredMandis = MANDIS.filter(m => settings.enabledMandis.includes(m));
@@ -107,7 +98,6 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                 {filteredMandis.map(m => (
                   <th key={m} className="text-right py-2 px-1 text-xs font-semibold">{m} (₹/qtl)</th>
                 ))}
-                <th className="text-center py-2 px-1 text-xs font-semibold hidden sm:table-cell">Season</th>
                 <th className="text-center py-2 px-1 text-xs font-semibold">Signal</th>
               </tr>
             </thead>
@@ -139,9 +129,7 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                               )}
                             </div>
                             <div className="text-[10px] text-muted-foreground hidden min-[400px]:block">
-                              {price.min_price && price.max_price
-                                ? `₹${price.min_price}–${price.max_price}`
-                                : '—'}
+                              {price.min_price && price.max_price ? `₹${price.min_price}–${price.max_price}` : '—'}
                             </div>
                             {price.arrivals_qtl && (
                               <div className="text-[9px] text-muted-foreground">📦 {price.arrivals_qtl}qtl</div>
@@ -154,9 +142,6 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
                       </td>
                     );
                   })}
-                  <td className="text-center py-2 px-1 hidden sm:table-cell">
-                    <SeasonBadge commodity={crop.commodityName} />
-                  </td>
                   <td className="text-center py-2 px-1">
                     <SellSignalBadge prices={prices} commodity={crop.commodityName} />
                   </td>
@@ -180,4 +165,4 @@ export function MarketPulseSection({ prices, isLoading, onFetchPrices, isFetchin
       </div>
     </div>
   );
-}
+});

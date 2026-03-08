@@ -92,11 +92,11 @@ const SettingsPage = () => {
   const lastClientFetch = getLastDailyFetch();
   const getAutoRunStatus = () => {
     const ref = lastAutoRun || lastClientFetch;
-    if (!ref) return { dot: 'bg-danger', label: 'Never run' };
+    if (!ref) return { dot: 'bg-destructive', label: 'Never run' };
     const hours = (Date.now() - new Date(ref).getTime()) / 3600000;
     if (hours < 25) return { dot: 'bg-success', label: 'Healthy' };
     if (hours < 48) return { dot: 'bg-warning', label: 'Delayed' };
-    return { dot: 'bg-danger', label: 'Stale' };
+    return { dot: 'bg-destructive', label: 'Stale' };
   };
   const autoRunStatus = getAutoRunStatus();
 
@@ -174,7 +174,6 @@ const SettingsPage = () => {
           </AlertDialog>
         </div>
 
-        {/* About */}
         <div className="bg-card rounded-lg shadow-sm p-4">
           <h2 className="text-sm font-bold mb-3">ℹ️ About</h2>
           <div className="space-y-1 text-xs text-muted-foreground">
@@ -182,7 +181,7 @@ const SettingsPage = () => {
             <p>Personal Farm Intelligence for Bhavere, Nashik</p>
             <p>Crops: Banana · Tomato · Karela · Papaya · Onion</p>
             <p>Data sources: Open-Meteo, data.gov.in, Agmarknet</p>
-            <p>AI: Lovable AI (Gemini)</p>
+            <p>AI: Claude (Anthropic) — Direct API</p>
           </div>
         </div>
       </main>
