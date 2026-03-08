@@ -17,7 +17,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       advice: null,
       fallback: true,
-      reason: 'ANTHROPIC_API_KEY not configured',
+      use_smart_advisor: true,
+      reason: 'No AI key configured — using Smart Advisor (deterministic, free, instant)',
       generated_at: new Date().toISOString()
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
@@ -117,6 +118,7 @@ Keep total under 350 words. Be specific to Nashik/Maharashtra context.`;
     return new Response(JSON.stringify({
       advice: null,
       fallback: true,
+      use_smart_advisor: true,
       reason: (error as Error).message,
       generated_at: new Date().toISOString()
     }), {

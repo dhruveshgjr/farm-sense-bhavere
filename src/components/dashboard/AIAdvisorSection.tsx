@@ -6,6 +6,7 @@ import type { PriceRecord } from '@/hooks/usePrices';
 import type { WeatherDay } from '@/hooks/useWeather';
 import type { CropAlert } from '@/lib/advisoryEngine';
 import { useLanguage } from '@/hooks/useLanguage';
+import { generateSmartAdvice, type SmartAdvice } from '@/lib/smartAdvisor';
 
 interface AIAdvisorSectionProps {
   weather?: WeatherDay[];
@@ -14,13 +15,15 @@ interface AIAdvisorSectionProps {
   trends: any[];
 }
 
+type AdviceSource = 'ai' | 'smart';
+
 export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices, alerts, trends }: AIAdvisorSectionProps) {
   const { t } = useLanguage();
-  const [advice, setAdvice] = useState<string | null>(null);
+  const [adviceText, setAdviceText] = useState<string | null>(null);
+  const [adviceSource, setAdviceSource] = useState<AdviceSource>('smart');
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCached() {
@@ -30,19 +33,28 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
         .order('generated_at', { ascending: false })
         .limit(1);
       if (data?.[0]) {
-        setAdvice(data[0].advice_text);
+        setAdviceText(data[0].advice_text);
         setGeneratedAt(data[0].generated_at);
+        setAdviceSource('ai');
       }
     }
     loadCached();
   }, []);
 
+  const useSmartAdvisor = () => {
+    const month = new Date().getMonth() + 1;
+    const smart = generateSmartAdvice(weather || [], prices, alerts, month);
+    const text = `WEATHER RISK: ${smart.weather_risk}\nMARKET INTELLIGENCE: ${smart.market_intelligence}\nTOP 3 ACTIONS:\n${smart.top_3_actions}\nTODAY'S PRIORITY: ${smart.todays_priority}`;
+    setAdviceText(text);
+    setAdviceSource('smart');
+    setGeneratedAt(smart.generated_at);
+  };
+
   const generateAdvice = async () => {
     setLoading(true);
     setError(null);
-    setFallbackReason(null);
     try {
-      const minDelay = new Promise(r => setTimeout(r, 3000));
+      const minDelay = new Promise(r => setTimeout(r, 300));
 
       const fetchPromise = supabase.functions.invoke('ai-advisor', {
         body: {
@@ -59,24 +71,27 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
       if (result.error) throw new Error(result.error.message);
 
       const data = result.data;
-      if (data?.fallback) {
-        setFallbackReason(data.reason || 'AI unavailable');
+      if (data?.fallback || data?.use_smart_advisor) {
+        // Use client-side Smart Advisor
+        useSmartAdvisor();
         return;
       }
 
       if (data?.advice) {
-        setAdvice(data.advice);
+        setAdviceText(data.advice);
+        setAdviceSource('ai');
         setGeneratedAt(data.generated_at);
       }
     } catch (err: any) {
-      setError(err.message || 'Could not generate AI advice');
+      // On any error, fall back to Smart Advisor
+      console.warn('AI advisor failed, using Smart Advisor:', err.message);
+      useSmartAdvisor();
     } finally {
       setLoading(false);
     }
   };
 
   const renderAdvice = (text: string) => {
-    // Parse structured sections
     const weatherRisk = text.match(/WEATHER RISK:\s*([\s\S]*?)(?=\nMARKET INTELLIGENCE:|$)/i)?.[1]?.trim();
     const marketIntel = text.match(/MARKET INTELLIGENCE:\s*([\s\S]*?)(?=\nTOP 3 ACTIONS:|$)/i)?.[1]?.trim();
     const actions = text.match(/TOP 3 ACTIONS:\s*([\s\S]*?)(?=\nTODAY'S PRIORITY:|$)/i)?.[1]?.trim();
@@ -115,46 +130,24 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
       );
     }
 
-    // Fallback: render raw text with basic formatting
     return (
       <div className="prose prose-sm max-w-none text-xs space-y-2">
-        {text.split('\n').filter(Boolean).map((line, i) => {
-          if (line.toLowerCase().includes("today's priority")) {
-            const content = line.replace(/^.*?priority[:\s]*/i, '').trim();
-            return (
-              <div key={i} className="bg-success/15 rounded-lg p-2.5 border border-success/30">
-                <div className="text-[10px] font-bold text-success uppercase mb-0.5">🎯 {t('today.priority')}</div>
-                <p className="text-sm font-semibold text-foreground leading-snug">{content}</p>
-              </div>
-            );
-          }
-          return <p key={i} className="leading-relaxed whitespace-pre-line">{line}</p>;
-        })}
+        {text.split('\n').filter(Boolean).map((line, i) => (
+          <p key={i} className="leading-relaxed whitespace-pre-line">{line}</p>
+        ))}
       </div>
     );
   };
 
-  // ANTHROPIC_API_KEY not configured — show informational card
-  if (fallbackReason?.includes('ANTHROPIC_API_KEY')) {
-    return (
-      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-3 rounded-t-lg text-sm font-bold tracking-wide uppercase text-primary-foreground"
-          style={{ background: 'linear-gradient(135deg, hsl(120 39% 24%), hsl(174 60% 30%))' }}>
-          🤖 {t('section.aiAdvisor')} — This Week's Intelligence
-        </div>
-        <div className="p-4 text-center">
-          <p className="text-sm text-muted-foreground mb-2">Add ANTHROPIC_API_KEY to Supabase secrets to enable AI advisor</p>
-          <p className="text-xs text-muted-foreground">Go to Settings → API Keys for setup instructions</p>
-        </div>
-      </div>
-    );
-  }
+  const sourceBadge = adviceSource === 'ai'
+    ? <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">🤖 AI generated</span>
+    : <span className="text-[9px] bg-accent/50 text-accent-foreground px-1.5 py-0.5 rounded-full">{t('smart_advisor_badge')}</span>;
 
   return (
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="px-4 py-3 rounded-t-lg text-sm font-bold tracking-wide uppercase text-primary-foreground"
         style={{ background: 'linear-gradient(135deg, hsl(120 39% 24%), hsl(174 60% 30%))' }}>
-        🤖 {t('section.aiAdvisor')} — This Week's Intelligence
+        {adviceSource === 'ai' ? '🤖' : '🧠'} {adviceSource === 'ai' ? t('section.aiAdvisor') : t('smart_advisor')} — This Week's Intelligence
       </div>
       <div className="p-3 space-y-3">
         {loading ? (
@@ -164,32 +157,28 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
             </div>
-            <p className="text-sm text-muted-foreground">🤖 KisanMitra is thinking...</p>
+            <p className="text-sm text-muted-foreground">🧠 KisanMitra is thinking...</p>
           </div>
-        ) : advice ? (
+        ) : adviceText ? (
           <>
-            {renderAdvice(advice)}
+            {renderAdvice(adviceText)}
             <div className="flex items-center justify-between pt-2 border-t border-border">
-              <span className="text-[10px] text-muted-foreground">
-                Last generated: {generatedAt ? formatLastUpdated(generatedAt) : '—'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">
+                  {generatedAt ? formatLastUpdated(generatedAt) : '—'}
+                </span>
+                {sourceBadge}
+              </div>
               <Button size="sm" variant="outline" className="text-xs" onClick={generateAdvice}>
                 {t('btn.refreshAdvice')}
               </Button>
             </div>
           </>
-        ) : error || fallbackReason ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              {fallbackReason || error || 'AI advisor temporarily unavailable — showing rule-based alerts'}
-            </p>
-            <Button size="sm" className="mt-2 text-xs" onClick={generateAdvice}>Try Again</Button>
-          </div>
         ) : (
           <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">AI advisor ready to generate personalized farm intelligence</p>
+            <p className="text-sm text-muted-foreground mb-3">Farm intelligence ready — generate your weekly advisory</p>
             <Button size="sm" className="text-xs" onClick={generateAdvice}>
-              Generate AI Advice
+              Generate Advice
             </Button>
           </div>
         )}
