@@ -7,6 +7,7 @@ import type { WeatherDay } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 import { getWeatherEmoji } from '@/lib/farmConfig';
 import { computeAlertLevel, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
+import { DataFreshnessIndicator } from '@/components/DataFreshnessIndicator';
 
 interface AppHeaderProps {
   onRefresh?: () => void;
@@ -101,11 +102,15 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => window.open('/report-print', '_blank');
 
   const handleShare = () => {
     const text = buildWhatsAppReport(prices, weather);
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+    const url = isMobile
+      ? `whatsapp://send?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -121,10 +126,7 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-accent animate-pulse-dot" />
-              <span className="text-xs text-primary-foreground/80">Live</span>
-            </div>
+            <DataFreshnessIndicator onRefresh={onRefresh} />
             <Button size="sm" variant="secondary" onClick={handlePrint} className="text-xs print:hidden">
               <FileText className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">Report</span>

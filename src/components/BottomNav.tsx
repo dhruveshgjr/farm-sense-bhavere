@@ -15,7 +15,6 @@ export function BottomNav() {
   const location = useLocation();
   const { data: weather } = useWeather();
 
-  // Calculate alert badge count
   let alertCount = 0;
   if (weather) {
     const allAlerts = generateAllAdvisories(weather);
@@ -24,7 +23,7 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border md:hidden print:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border md:hidden print:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex justify-around items-center h-16">
         {navItems.map(item => {
           const isActive = location.pathname === item.to;
@@ -39,7 +38,7 @@ export function BottomNav() {
               }`}
             >
               <span className="text-lg">{item.emoji}</span>
-              <span className="text-[9px] font-medium">{item.label}</span>
+              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{item.label}</span>
               {item.to === '/advisory' && alertCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-danger text-primary-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {alertCount > 9 ? '9+' : alertCount}

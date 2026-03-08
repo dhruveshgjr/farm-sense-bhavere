@@ -8,10 +8,12 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 const HistoryPage = () => {
   const { data: prices = [], isLoading } = usePriceHistory(365);
   const [selectedCrops, setSelectedCrops] = useState<string[]>(CROPS.map(c => c.commodityName));
+  const [visibleRows, setVisibleRows] = useState(50);
 
   const toggleCrop = (commodity: string) => {
     setSelectedCrops(prev =>
@@ -37,17 +39,13 @@ const HistoryPage = () => {
       ...vals,
     }));
 
-  // Stats
   const allPrices = prices.map(p => p.modal_price);
   const highest = allPrices.length ? Math.max(...allPrices) : 0;
   const lowest = allPrices.length ? Math.min(...allPrices) : 0;
   const highestCrop = prices.find(p => p.modal_price === highest);
   const lowestCrop = prices.find(p => p.modal_price === lowest);
-
-  // Distinct days
   const uniqueDays = new Set(prices.map(p => p.price_date)).size;
 
-  // Volatility per crop
   const volatilities = CROPS.map(crop => {
     const cropPrices = prices.filter(p => p.commodity === crop.commodityName).map(p => p.modal_price);
     return { crop: crop.name, ...computeVolatility(cropPrices) };
@@ -89,7 +87,7 @@ const HistoryPage = () => {
           </div>
         </div>
 
-        {/* Year-on-Year Comparison */}
+        {/* Year-on-Year */}
         <div className="bg-card rounded-lg shadow-sm p-3">
           <h3 className="text-xs font-bold mb-2">📅 Year-on-Year Comparison</h3>
           {uniqueDays < 365 ? (
@@ -126,7 +124,7 @@ const HistoryPage = () => {
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : chartData.length > 0 ? (
-              <div className="h-64">
+              <div className="h-48 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -154,7 +152,7 @@ const HistoryPage = () => {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table with Load More */}
         <div className="bg-card rounded-lg shadow-sm overflow-hidden">
           <div className="section-header section-header-market">📋 All Price Records</div>
           <div className="p-3 overflow-x-auto">
@@ -168,7 +166,7 @@ const HistoryPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {prices.slice(0, 50).map(p => (
+                {prices.slice(0, visibleRows).map(p => (
                   <tr key={p.id} className="border-b border-border/50">
                     <td className="py-1">{new Date(p.price_date).toLocaleDateString('en-IN')}</td>
                     <td className="py-1">{p.commodity}</td>
@@ -178,8 +176,12 @@ const HistoryPage = () => {
                 ))}
               </tbody>
             </table>
-            {prices.length > 50 && (
-              <p className="text-[10px] text-muted-foreground text-center mt-2">Showing 50 of {prices.length} records</p>
+            {prices.length > visibleRows && (
+              <div className="text-center mt-3">
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => setVisibleRows(v => v + 50)}>
+                  Load More ({prices.length - visibleRows} remaining)
+                </Button>
+              </div>
             )}
           </div>
         </div>

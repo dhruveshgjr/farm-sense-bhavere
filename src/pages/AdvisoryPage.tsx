@@ -9,6 +9,7 @@ import { CROPS, SEASONAL_CONTEXT } from '@/lib/farmConfig';
 import { getSeasonalContext } from '@/lib/trendEngine';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 const SEVERITY_FILTERS = ['All', 'DANGER', 'WARNING', 'INFO'] as const;
 
@@ -33,15 +34,18 @@ const AdvisoryPage = () => {
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <AppHeader />
       <main className="container mx-auto px-3 py-4 max-w-2xl space-y-4">
-        {/* Crop filter */}
-        <div className="flex gap-1.5 flex-wrap">
-          <Button size="sm" variant={cropFilter === 'All' ? 'default' : 'outline'} onClick={() => setCropFilter('All')} className="text-xs">All Crops</Button>
-          {CROPS.map(c => (
-            <Button key={c.name} size="sm" variant={cropFilter === c.name ? 'default' : 'outline'} onClick={() => setCropFilter(c.name)} className="text-xs">{c.name}</Button>
-          ))}
-        </div>
+        {/* Crop filter - horizontal scroll on mobile */}
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-1.5 pb-2">
+            <Button size="sm" variant={cropFilter === 'All' ? 'default' : 'outline'} onClick={() => setCropFilter('All')} className="text-xs">All Crops</Button>
+            {CROPS.map(c => (
+              <Button key={c.name} size="sm" variant={cropFilter === c.name ? 'default' : 'outline'} onClick={() => setCropFilter(c.name)} className="text-xs">{c.name}</Button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
 
-        {/* Severity filter */}
+        {/* Severity filter - separate row */}
         <div className="flex gap-1.5">
           {SEVERITY_FILTERS.map(s => (
             <Button key={s} size="sm" variant={severityFilter === s ? 'default' : 'outline'} onClick={() => setSeverityFilter(s)} className="text-xs">

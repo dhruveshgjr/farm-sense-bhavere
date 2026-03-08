@@ -131,6 +131,10 @@
 
 /* Print styles */
 @media print {
+  @page { size: A4; margin: 15mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page-break { page-break-before: always; }
+  .recharts-wrapper { width: 100% !important; height: 200px !important; }
   .print\\:hidden {
     display: none !important;
   }

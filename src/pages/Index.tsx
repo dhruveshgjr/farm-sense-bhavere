@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { WeatherSection } from '@/components/dashboard/WeatherSection';
@@ -7,15 +7,17 @@ import { PriceTrendsSection } from '@/components/dashboard/PriceTrendsSection';
 import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
 import { OpportunitiesSection } from '@/components/dashboard/OpportunitiesSection';
 import { PriceAlertBanner } from '@/components/dashboard/PriceAlertBanner';
+import { QuickStatsStrip } from '@/components/dashboard/QuickStatsStrip';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
+import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 import { checkAndNotify } from '@/components/NotificationSettings';
-import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const weather = useWeather();
@@ -23,6 +25,28 @@ const Index = () => {
   const fetchPricesMutation = useFetchPrices();
   const { data: distinctDays = 0 } = useDistinctPriceDays();
   const [refreshLabel, setRefreshLabel] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Check onboarding state
+  useEffect(() => {
+    if (localStorage.getItem('kisanmitra_onboarded') === 'true') {
+      setCheckingOnboarding(false);
+      return;
+    }
+    // Check if there's data
+    async function check() {
+      const [{ count: priceCount }, { count: weatherCount }] = await Promise.all([
+        supabase.from('daily_prices').select('*', { count: 'exact', head: true }),
+        supabase.from('weather_cache').select('*', { count: 'exact', head: true }),
+      ]);
+      if ((priceCount ?? 0) === 0 && (weatherCount ?? 0) === 0) {
+        setShowOnboarding(true);
+      }
+      setCheckingOnboarding(false);
+    }
+    check();
+  }, []);
 
   // Check for notifications on load
   useEffect(() => {
@@ -61,6 +85,11 @@ const Index = () => {
     }
   };
 
+  if (checkingOnboarding) return null;
+  if (showOnboarding) {
+    return <OnboardingOverlay onComplete={() => { setShowOnboarding(false); weather.refetch(); }} />;
+  }
+
   const lastUpdated = prices.data?.[0]?.fetched_at;
   const hasPrices = (prices.data?.length ?? 0) > 0;
 
@@ -77,6 +106,8 @@ const Index = () => {
       />
 
       <main className="container mx-auto px-3 py-4 space-y-4 max-w-2xl">
+        <QuickStatsStrip prices={prices.data ?? []} weather={weather.data} />
+
         {!hasPrices && !prices.isLoading && (
           <div className="bg-warning/20 border border-warning rounded-lg p-3 text-sm">
             ⚠️ No price history yet. Click <strong>'Fetch Latest Prices'</strong> to load today's mandi data.
