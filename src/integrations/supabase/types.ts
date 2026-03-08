@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      report_history: {
+        Row: {
+          generated_at: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          generated_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          generated_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      weather_cache: {
+        Row: {
+          fetched_at: string | null
+          forecast_date: string
+          humidity_max: number | null
+          id: string
+          rain_mm: number | null
+          rain_prob_pct: number | null
+          temp_max: number | null
+          temp_min: number | null
+          weathercode: number | null
+          wind_kmh: number | null
+        }
+        Insert: {
+          fetched_at?: string | null
+          forecast_date: string
+          humidity_max?: number | null
+          id?: string
+          rain_mm?: number | null
+          rain_prob_pct?: number | null
+          temp_max?: number | null
+          temp_min?: number | null
+          weathercode?: number | null
+          wind_kmh?: number | null
+        }
+        Update: {
+          fetched_at?: string | null
+          forecast_date?: string
+          humidity_max?: number | null
+          id?: string
+          rain_mm?: number | null
+          rain_prob_pct?: number | null
+          temp_max?: number | null
+          temp_min?: number | null
+          weathercode?: number | null
+          wind_kmh?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
