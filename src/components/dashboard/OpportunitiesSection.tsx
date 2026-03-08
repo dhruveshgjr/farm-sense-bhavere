@@ -1,5 +1,5 @@
 import { CROPS, MANDIS } from '@/lib/farmConfig';
-import { computeAlertLevel, computePctChange } from '@/lib/trendEngine';
+import { computeAlertLevel, computePctChange, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
 import { getSettings } from '@/lib/settingsStore';
 
@@ -12,6 +12,7 @@ interface OpportunitiesSectionProps {
 export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: OpportunitiesSectionProps) {
   const settings = getSettings();
   const filteredCrops = CROPS.filter(c => settings.enabledCrops.includes(c.commodityName));
+  const month = new Date().getMonth() + 1;
 
   const opportunities: Array<{
     crop: string;
@@ -19,6 +20,8 @@ export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: Op
     price: number;
     pct: number;
     level: string;
+    sellSignal: string;
+    sellReason: string;
   }> = [];
 
   for (const crop of filteredCrops) {
@@ -28,12 +31,16 @@ export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: Op
       if (!latest || !avg90) continue;
       const level = computeAlertLevel(latest.modal_price, avg90);
       if (level === 'RED' || level === 'GREEN' || level === 'YELLOW') {
+        const season = getSeasonalContext(crop.commodityName, month);
+        const signal = getSellSignal(latest.modal_price, avg90, level, season.season);
         opportunities.push({
           crop: crop.name,
           mandi,
           price: latest.modal_price,
           pct: computePctChange(latest.modal_price, avg90),
           level,
+          sellSignal: signal.signal,
+          sellReason: signal.reason,
         });
       }
     }
@@ -56,12 +63,7 @@ export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: Op
         ) : (
           opportunities.map((opp, i) => {
             const bgCls = opp.level === 'RED' ? 'alert-danger' : opp.level === 'GREEN' ? 'alert-info' : 'alert-warning';
-            const action = opp.level === 'RED'
-              ? `${opp.crop} prices have crashed. Consider holding stock if possible.`
-              : opp.level === 'GREEN'
-              ? `${opp.crop} prices are spiking! Good time to sell at ${opp.mandi}.`
-              : `${opp.crop} prices are softening. Monitor closely before selling.`;
-
+            const signalColor = opp.sellSignal === 'SELL NOW' ? 'text-success' : opp.sellSignal === 'FORCED SELL' ? 'text-danger' : 'text-warning';
             return (
               <div key={i} className={bgCls}>
                 <div className="flex items-center justify-between">
@@ -76,7 +78,10 @@ export function OpportunitiesSection({ prices, isLoading, distinctDays = 0 }: Op
                     </div>
                   </div>
                 </div>
-                <p className="text-xs mt-1">{action}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs">{opp.sellReason}</p>
+                  <span className={`text-xs font-bold ${signalColor}`}>📊 {opp.sellSignal}</span>
+                </div>
               </div>
             );
           })

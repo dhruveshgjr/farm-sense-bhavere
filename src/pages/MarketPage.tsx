@@ -3,7 +3,8 @@ import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { CROPS } from '@/lib/farmConfig';
 import { usePriceHistory, type PriceRecord } from '@/hooks/usePrices';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { computeVolatility } from '@/lib/trendEngine';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -51,31 +52,44 @@ const MarketPage = () => {
         {CROPS.map(crop => {
           const cropPrices = prices
             .filter(p => p.commodity === crop.commodityName)
-            .sort((a, b) => a.price_date.localeCompare(b.price_date))
+            .sort((a, b) => a.price_date.localeCompare(b.price_date));
+
+          const chartPrices = cropPrices.map(p => ({
+            date: new Date(p.price_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+            price: p.modal_price,
+            mandi: p.mandi,
+          }));
+
+          // Arrivals data
+          const arrivalData = cropPrices
+            .filter(p => p.arrivals_qtl && p.arrivals_qtl > 0)
             .map(p => ({
               date: new Date(p.price_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-              price: p.modal_price,
-              mandi: p.mandi,
+              arrivals: p.arrivals_qtl,
             }));
+
+          // Volatility badge
+          const vol = computeVolatility(cropPrices.map(p => p.modal_price));
+          const volColor = vol.label === 'High' ? 'text-danger' : vol.label === 'Medium' ? 'text-warning' : 'text-success';
 
           return (
             <div key={crop.name} className="bg-card rounded-lg shadow-sm overflow-hidden">
               <div className="section-header section-header-market flex items-center justify-between">
-                <span>{crop.name} ({crop.localName})</span>
-                <button
-                  onClick={() => exportCsv(crop.commodityName)}
-                  className="text-[10px] underline opacity-80"
-                >
+                <span>
+                  {crop.name} ({crop.localName})
+                  <span className={`ml-2 text-[10px] ${volColor}`}>Vol: {vol.score.toFixed(0)}% ({vol.label})</span>
+                </span>
+                <button onClick={() => exportCsv(crop.commodityName)} className="text-[10px] underline opacity-80">
                   Export CSV
                 </button>
               </div>
               <div className="p-3">
                 {isLoading ? (
                   <Skeleton className="h-48 w-full" />
-                ) : cropPrices.length > 0 ? (
+                ) : chartPrices.length > 0 ? (
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={cropPrices}>
+                      <LineChart data={chartPrices}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
@@ -88,7 +102,25 @@ const MarketPage = () => {
                   <p className="text-sm text-muted-foreground text-center py-8">No price data available</p>
                 )}
 
-                {cropPrices.length > 0 && (
+                {/* Arrivals bar chart */}
+                {arrivalData.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-semibold mb-1">Daily Arrivals at Mandi (Quintals)</h4>
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={arrivalData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 9 }} />
+                          <YAxis tick={{ fontSize: 9 }} />
+                          <Tooltip />
+                          <Bar dataKey="arrivals" fill="hsl(var(--info))" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {chartPrices.length > 0 && (
                   <div className="mt-3 overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>

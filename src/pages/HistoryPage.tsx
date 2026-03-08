@@ -3,9 +3,11 @@ import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { CROPS } from '@/lib/farmConfig';
 import { usePriceHistory, type PriceRecord } from '@/hooks/usePrices';
+import { computeVolatility } from '@/lib/trendEngine';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 
 const HistoryPage = () => {
   const { data: prices = [], isLoading } = usePriceHistory(365);
@@ -42,6 +44,15 @@ const HistoryPage = () => {
   const highestCrop = prices.find(p => p.modal_price === highest);
   const lowestCrop = prices.find(p => p.modal_price === lowest);
 
+  // Distinct days
+  const uniqueDays = new Set(prices.map(p => p.price_date)).size;
+
+  // Volatility per crop
+  const volatilities = CROPS.map(crop => {
+    const cropPrices = prices.filter(p => p.commodity === crop.commodityName).map(p => p.modal_price);
+    return { crop: crop.name, ...computeVolatility(cropPrices) };
+  });
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <AppHeader />
@@ -52,7 +63,7 @@ const HistoryPage = () => {
             { label: 'Highest Price', value: `₹${highest.toLocaleString()}`, sub: highestCrop?.commodity },
             { label: 'Lowest Price', value: `₹${lowest.toLocaleString()}`, sub: lowestCrop?.commodity },
             { label: 'Total Records', value: prices.length.toString(), sub: 'data points' },
-            { label: 'Crops Tracked', value: '5', sub: 'commodities' },
+            { label: 'Days Tracked', value: uniqueDays.toString(), sub: 'unique days' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-lg p-3 shadow-sm">
               <div className="text-[10px] text-muted-foreground">{s.label}</div>
@@ -60,6 +71,38 @@ const HistoryPage = () => {
               <div className="text-[10px] text-muted-foreground">{s.sub}</div>
             </div>
           ))}
+        </div>
+
+        {/* Price Volatility */}
+        <div className="bg-card rounded-lg shadow-sm p-3">
+          <h3 className="text-xs font-bold mb-2">📊 Price Volatility (30-day)</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {volatilities.map(v => {
+              const colorCls = v.label === 'High' ? 'text-danger' : v.label === 'Medium' ? 'text-warning' : 'text-success';
+              return (
+                <div key={v.crop} className="flex items-center justify-between text-xs border border-border rounded px-2 py-1.5">
+                  <span>{v.crop}</span>
+                  <span className={`font-bold ${colorCls}`}>{v.score.toFixed(1)}% ({v.label})</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Year-on-Year Comparison */}
+        <div className="bg-card rounded-lg shadow-sm p-3">
+          <h3 className="text-xs font-bold mb-2">📅 Year-on-Year Comparison</h3>
+          {uniqueDays < 365 ? (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Comparison will be available after 1 year of data collection</p>
+              <div className="flex items-center gap-2">
+                <Progress value={(uniqueDays / 365) * 100} className="flex-1 h-2" />
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{uniqueDays}/365 days</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Year-on-year data available. Charts coming soon.</p>
+          )}
         </div>
 
         {/* Crop selector */}

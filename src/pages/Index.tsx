@@ -7,9 +7,15 @@ import { PriceTrendsSection } from '@/components/dashboard/PriceTrendsSection';
 import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
 import { OpportunitiesSection } from '@/components/dashboard/OpportunitiesSection';
 import { PriceAlertBanner } from '@/components/dashboard/PriceAlertBanner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { InstallBanner } from '@/components/InstallBanner';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
+import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { checkAndNotify } from '@/components/NotificationSettings';
+import { useEffect } from 'react';
 
 const Index = () => {
   const weather = useWeather();
@@ -17,6 +23,15 @@ const Index = () => {
   const fetchPricesMutation = useFetchPrices();
   const { data: distinctDays = 0 } = useDistinctPriceDays();
   const [refreshLabel, setRefreshLabel] = useState('');
+
+  // Check for notifications on load
+  useEffect(() => {
+    if (weather.data) {
+      const allAlerts = generateAllAdvisories(weather.data);
+      const sorted = getPrioritySummary(allAlerts);
+      checkAndNotify(sorted);
+    }
+  }, [weather.data]);
 
   const handleRefresh = async () => {
     setRefreshLabel('Fetching weather + prices...');
@@ -35,7 +50,7 @@ const Index = () => {
           description: `Weather ✓, prices: ${result.success}/10 fetched, ${result.cached} cached`,
         });
       }
-    } catch (err: any) {
+    } catch {
       toast({
         title: '⚠️ Price fetch failed',
         description: 'API key not configured. Add DATAGOV_API_KEY in Cloud secrets.',
@@ -51,6 +66,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
+      <InstallBanner />
+      <OfflineBanner />
       <AppHeader
         onRefresh={handleRefresh}
         isRefreshing={weather.isFetching || fetchPricesMutation.isPending}
@@ -69,21 +86,35 @@ const Index = () => {
 
         <PriceAlertBanner prices={prices.data ?? []} />
 
-        <WeatherSection
-          data={weather.data}
-          isLoading={weather.isLoading}
-          lastFetched={weather.dataUpdatedAt ? new Date(weather.dataUpdatedAt).toISOString() : null}
-        />
-        <MarketPulseSection
-          prices={prices.data ?? []}
-          isLoading={prices.isLoading}
-          onFetchPrices={() => fetchPricesMutation.mutate()}
-          isFetching={fetchPricesMutation.isPending}
-          lastUpdated={lastUpdated}
-        />
-        <PriceTrendsSection prices={prices.data ?? []} isLoading={prices.isLoading} />
-        <AdvisorySection forecast={weather.data} isLoading={weather.isLoading} />
-        <OpportunitiesSection prices={prices.data ?? []} isLoading={prices.isLoading} distinctDays={distinctDays} />
+        <ErrorBoundary section="Weather">
+          <WeatherSection
+            data={weather.data}
+            isLoading={weather.isLoading}
+            lastFetched={weather.dataUpdatedAt ? new Date(weather.dataUpdatedAt).toISOString() : null}
+          />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Market Pulse">
+          <MarketPulseSection
+            prices={prices.data ?? []}
+            isLoading={prices.isLoading}
+            onFetchPrices={() => fetchPricesMutation.mutate()}
+            isFetching={fetchPricesMutation.isPending}
+            lastUpdated={lastUpdated}
+          />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Price Trends">
+          <PriceTrendsSection prices={prices.data ?? []} isLoading={prices.isLoading} />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Advisory">
+          <AdvisorySection forecast={weather.data} isLoading={weather.isLoading} />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Opportunities">
+          <OpportunitiesSection prices={prices.data ?? []} isLoading={prices.isLoading} distinctDays={distinctDays} />
+        </ErrorBoundary>
 
         <footer className="text-center text-[10px] text-muted-foreground py-4 print:block">
           Data: Open-Meteo (weather) • data.gov.in (prices) • Prices are last-cached — verify before decisions

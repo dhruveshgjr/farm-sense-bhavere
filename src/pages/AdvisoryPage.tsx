@@ -4,6 +4,7 @@ import { BottomNav } from '@/components/BottomNav';
 import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary, type CropAlert } from '@/lib/advisoryEngine';
 import { AlertCard } from '@/components/dashboard/AdvisorySection';
+import { CropCalendar } from '@/components/dashboard/CropCalendar';
 import { CROPS, SEASONAL_CONTEXT } from '@/lib/farmConfig';
 import { getSeasonalContext } from '@/lib/trendEngine';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,9 @@ const AdvisoryPage = () => {
             })}
           </div>
         </div>
+
+        {/* Crop Calendar */}
+        <CropCalendar />
       </main>
       <BottomNav />
     </div>

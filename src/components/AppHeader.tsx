@@ -2,9 +2,11 @@ import { RefreshCw, FileText, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavLink } from 'react-router-dom';
 import { CROPS, MANDIS } from '@/lib/farmConfig';
-import { getLatestPrice, type PriceRecord } from '@/hooks/usePrices';
+import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
 import type { WeatherDay } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { getWeatherEmoji } from '@/lib/farmConfig';
+import { computeAlertLevel, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 
 interface AppHeaderProps {
   onRefresh?: () => void;
@@ -21,31 +23,76 @@ const navItems = [
   { to: '/settings', label: 'Settings' },
 ];
 
-function buildWhatsAppSummary(prices: PriceRecord[], weather?: WeatherDay[]): string {
-  const today = new Date().toLocaleDateString('en-IN');
-  let text = `🌾 KisanMitra Report - ${today}\n📍 Bhavere, Nashik\n\n`;
+const CROP_EMOJI: Record<string, string> = {
+  'Tomato': '🍅', 'Onion': '🧅', 'Banana': '🍌', 'Bitter Gourd': '🥒', 'Papaya': '🍈',
+};
+const CROP_MARATHI: Record<string, string> = {
+  'Tomato': 'टोमॅटो', 'Onion': 'कांदा', 'Banana': 'केळ', 'Bitter Gourd': 'करेला', 'Papaya': 'पपई',
+};
 
-  if (weather && weather.length > 0) {
-    const rainyDays = weather.slice(0, 7).filter(d => d.rain_mm > 1).length;
-    const maxTemp = Math.max(...weather.map(d => d.temp_max));
-    text += `🌤 Weather: ${rainyDays} rainy days ahead, max ${Math.round(maxTemp)}°C\n\n`;
+function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): string {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const month = today.getMonth() + 1;
+
+  let text = `🌾 *KisanMitra रिपोर्ट — ${dateStr}*\n📍 भावेरे, नाशिक\n━━━━━━━━━━━━━━━━\n💰 *आजचे मंडी भाव* (Today's Prices)\n━━━━━━━━━━━━━━━━\n`;
+
+  for (const crop of CROPS) {
+    const mainMandi = crop.commodityName === 'Onion' ? 'Lasalgaon' : 'Nashik';
+    const p = getLatestPrice(prices, crop.commodityName, mainMandi);
+    const avg30 = getAvgPrice(prices, crop.commodityName, 30);
+    let arrow = '→';
+    if (p && avg30) {
+      const pct = ((p.modal_price - avg30) / avg30) * 100;
+      arrow = pct > 5 ? '▲' : pct < -5 ? '▼' : '→';
+    }
+    const emoji = CROP_EMOJI[crop.commodityName] || '🌾';
+    const marathi = CROP_MARATHI[crop.commodityName] || crop.name;
+    text += `${emoji} ${marathi} (${mainMandi}): ${p ? `₹${p.modal_price.toLocaleString()}/qtl ${arrow}` : 'N/A'}\n`;
   }
 
-  text += `💰 Prices today:\n`;
-  for (const crop of CROPS) {
-    for (const mandi of MANDIS) {
-      const p = getLatestPrice(prices, crop.commodityName, mandi);
-      if (p) text += `${crop.name} (${mandi}): ₹${p.modal_price.toLocaleString()}\n`;
+  if (weather && weather.length >= 3) {
+    text += `\n━━━━━━━━━━━━━━━━\n🌤 *हवामान* (Weather Next 3 Days)\n━━━━━━━━━━━━━━━━\n`;
+    for (let i = 0; i < 3; i++) {
+      const d = weather[i];
+      const dt = new Date(d.forecast_date);
+      const label = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      text += `${getWeatherEmoji(d.weathercode)} ${label}: ${Math.round(d.temp_min)}–${Math.round(d.temp_max)}°C, 💧${d.rain_mm.toFixed(1)}mm\n`;
     }
   }
 
   if (weather) {
     const alerts = getPrioritySummary(generateAllAdvisories(weather));
-    text += `\n⚠️ Alerts: ${alerts.length} crop warnings this week`;
-    const danger = alerts.find(a => a.level === 'DANGER');
-    if (danger) text += `\n🔴 ${danger.title}`;
+    text += `\n━━━━━━━━━━━━━━━━\n⚠️ *इशारे* (Alerts)\n━━━━━━━━━━━━━━━━\n`;
+    if (alerts.length === 0) {
+      text += `✅ कोणतेही महत्त्वाचे इशारे नाहीत\n`;
+    } else {
+      const icons: Record<string, string> = { DANGER: '🔴', WARNING: '🟡', INFO: '🔵' };
+      alerts.slice(0, 3).forEach(a => {
+        text += `${icons[a.level] || '🔵'} ${a.crop}: ${a.title}\n`;
+      });
+    }
   }
 
+  // Sell signals
+  const sellLines: string[] = [];
+  for (const crop of CROPS) {
+    const mainMandi = crop.commodityName === 'Onion' ? 'Lasalgaon' : 'Nashik';
+    const p = getLatestPrice(prices, crop.commodityName, mainMandi);
+    const avg90 = getAvgPrice(prices, crop.commodityName, 90);
+    const alertLevel = computeAlertLevel(p?.modal_price ?? null, avg90);
+    const season = getSeasonalContext(crop.commodityName, month);
+    const signal = getSellSignal(p?.modal_price ?? null, avg90, alertLevel, season.season);
+    if (signal.signal === 'SELL NOW' || signal.signal === 'FORCED SELL') {
+      sellLines.push(`${CROP_EMOJI[crop.commodityName]} ${CROP_MARATHI[crop.commodityName]}: ${signal.signal} — ${signal.reason}`);
+    }
+  }
+  if (sellLines.length > 0) {
+    text += `\n━━━━━━━━━━━━━━━━\n📊 *विकणे सिग्नल* (Sell Signal)\n━━━━━━━━━━━━━━━━\n`;
+    text += sellLines.join('\n') + '\n';
+  }
+
+  text += `\n🌾 KisanMitra — भावेरे शेती बुद्धिमत्ता`;
   return text;
 }
 
@@ -54,12 +101,10 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   const handleShare = () => {
-    const text = buildWhatsAppSummary(prices, weather);
+    const text = buildWhatsAppReport(prices, weather);
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -80,32 +125,16 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
               <span className="w-2 h-2 rounded-full bg-accent animate-pulse-dot" />
               <span className="text-xs text-primary-foreground/80">Live</span>
             </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handlePrint}
-              className="text-xs print:hidden"
-            >
+            <Button size="sm" variant="secondary" onClick={handlePrint} className="text-xs print:hidden">
               <FileText className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">Report</span>
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleShare}
-              className="text-xs print:hidden"
-            >
+            <Button size="sm" variant="secondary" onClick={handleShare} className="text-xs print:hidden">
               <Share2 className="h-3 w-3 mr-1" />
               <span className="hidden sm:inline">WhatsApp</span>
             </Button>
             {onRefresh && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="text-xs print:hidden"
-              >
+              <Button size="sm" variant="secondary" onClick={onRefresh} disabled={isRefreshing} className="text-xs print:hidden">
                 <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? (refreshLabel || 'Fetching...') : 'Refresh'}
               </Button>
@@ -114,7 +143,6 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
         </div>
         <p className="text-[10px] text-primary-foreground/60 mt-1">{today}</p>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex gap-1 mt-2 print:hidden">
           {navItems.map(item => (
             <NavLink
