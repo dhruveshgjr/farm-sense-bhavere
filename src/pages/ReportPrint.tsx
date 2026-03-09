@@ -114,7 +114,7 @@ const ReportPrint = () => {
                 const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
                 return (
                   <tr key={crop.name} className="border-b border-gray-200">
-                    <td className="py-2 px-2">{crop.name} ({crop.localName})</td>
+                    <td className="py-2 px-2">{crop.name}</td>
                     {MANDIS.map(mandi => {
                       const p = getLatestPrice(prices, crop.commodityName, mandi);
                       return <td key={mandi} className="text-right py-2 px-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
