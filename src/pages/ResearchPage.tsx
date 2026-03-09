@@ -108,7 +108,7 @@ export default function ResearchPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
-      <AppHeader />
+      <AppHeader prices={prices} weather={weather} />
       <main className="container mx-auto px-3 py-4 max-w-7xl">
         <h1 className="text-xl font-bold mb-4">🔬 Research Desk</h1>
         
