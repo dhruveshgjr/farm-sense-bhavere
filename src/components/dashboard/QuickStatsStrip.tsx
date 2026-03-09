@@ -9,13 +9,6 @@ interface QuickStatsStripProps {
   weather?: WeatherDay[];
 }
 
-const CROP_CALENDAR: Record<string, { harvest: number[] }> = {
-  'Banana': { harvest: [4, 5] },
-  'Tomato': { harvest: [1, 2, 3, 9, 10] },
-  'Bitter Gourd': { harvest: [4, 5, 6, 8, 9] },
-  'Papaya': { harvest: [3, 4, 5] },
-  'Onion': { harvest: [2, 3, 4] },
-};
 
 export function QuickStatsStrip({ prices, weather }: QuickStatsStripProps) {
   const month = new Date().getMonth() + 1;
