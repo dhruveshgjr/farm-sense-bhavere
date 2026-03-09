@@ -1,7 +1,7 @@
 import { CROPS } from '@/lib/farmConfig';
 import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
-import { computePctChange, getSeasonalContext } from '@/lib/trendEngine';
-import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { computePctChange } from '@/lib/trendEngine';
+import { generateAllAdvisories, getPrioritySummary, computeSprayWindows } from '@/lib/advisoryEngine';
 import type { WeatherDay } from '@/hooks/useWeather';
 
 interface QuickStatsStripProps {
