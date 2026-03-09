@@ -30,7 +30,7 @@ const Index = () => {
   const weather = useWeather();
   const prices = usePrices();
   const fetchPricesMutation = useFetchPrices();
-  const { data: distinctDays = 0 } = useDistinctPriceDays();
+  
   const [refreshLabel, setRefreshLabel] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
