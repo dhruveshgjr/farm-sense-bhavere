@@ -1,21 +1,20 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, TrendingUp, Leaf, Settings, FileText } from 'lucide-react';
+import { Home, TrendingUp, Leaf, Settings, FileText, Download } from 'lucide-react';
 import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
-import { useLanguage } from '@/hooks/useLanguage';
 
 const navItems = [
-  { to: '/', icon: FileText, label: 'nav.today', emoji: '📋' },
-  { to: '/dashboard', icon: Home, label: 'nav.dashboard', emoji: '🏠' },
-  { to: '/market', icon: TrendingUp, label: 'nav.market', emoji: '💰' },
-  { to: '/advisory', icon: Leaf, label: 'nav.advisory', emoji: '🌱' },
-  { to: '/settings', icon: Settings, label: 'nav.settings', emoji: '⚙️' },
+  { to: '/', icon: FileText, label: 'Today', emoji: '📋' },
+  { to: '/dashboard', icon: Home, label: 'Dashboard', emoji: '🏠' },
+  { to: '/import', icon: Download, label: 'Import', emoji: '📥' },
+  { to: '/market', icon: TrendingUp, label: 'Market', emoji: '💰' },
+  { to: '/advisory', icon: Leaf, label: 'Advisory', emoji: '🌱' },
+  { to: '/settings', icon: Settings, label: 'Settings', emoji: '⚙️' },
 ];
 
 export function BottomNav() {
   const location = useLocation();
   const { data: weather } = useWeather();
-  const { t } = useLanguage();
 
   let alertCount = 0;
   if (weather) {
@@ -33,14 +32,14 @@ export function BottomNav() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 min-w-[56px] rounded-lg transition-colors relative ${
+              className={`flex flex-col items-center justify-center gap-0.5 px-2 py-2 min-w-[48px] rounded-lg transition-colors relative ${
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground'
               }`}
             >
               <span className="text-lg">{item.emoji}</span>
-              <span className={`text-[9px] font-medium ${!isActive ? 'hidden min-[400px]:block' : ''}`}>{t(item.label)}</span>
+              <span className={`text-[8px] font-medium ${!isActive ? 'hidden min-[420px]:block' : ''}`}>{item.label}</span>
               {item.to === '/advisory' && alertCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {alertCount > 9 ? '9+' : alertCount}

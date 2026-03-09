@@ -136,7 +136,7 @@ const SettingsPage = () => {
         <div className="bg-card rounded-lg shadow-sm p-4">
           <h2 className="text-sm font-bold mb-3">🌾 Tracked Crops</h2>
           <div className="space-y-3">
-            {CROPS.map(crop => (<div key={crop.name} className="flex items-center justify-between"><div><span className="text-sm font-medium">{crop.name}</span><span className="text-xs text-muted-foreground ml-1">({crop.localName})</span></div><Switch checked={settings.enabledCrops.includes(crop.commodityName)} onCheckedChange={() => toggleCrop(crop.commodityName)} /></div>))}
+            {CROPS.map(crop => (<div key={crop.name} className="flex items-center justify-between"><span className="text-sm font-medium">{crop.name}</span><Switch checked={settings.enabledCrops.includes(crop.commodityName)} onCheckedChange={() => toggleCrop(crop.commodityName)} /></div>))}
           </div>
         </div>
 
@@ -179,10 +179,9 @@ const SettingsPage = () => {
           <div className="space-y-1 text-xs text-muted-foreground">
             <p className="font-bold text-foreground">KisanMitra v1.0</p>
             <p>Personal Farm Intelligence for Bhavere, Nashik</p>
-            <p>Crops: Banana · Tomato · Karela · Papaya · Onion</p>
-            <p>Data sources: Open-Meteo, data.gov.in, Agmarknet</p>
+            <p>Crops: Banana · Tomato · Bitter Gourd · Papaya · Onion</p>
+            <p>Data sources: Open-Meteo (weather), data.gov.in (prices), Agmarknet (fallback)</p>
             <p>Intelligence: Smart Advisor (free) + Claude AI (optional)</p>
-            <p>Data sources: Open-Meteo (weather), data.gov.in (prices, no key required), Agmarknet (fallback)</p>
           </div>
         </div>
       </main>

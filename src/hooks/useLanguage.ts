@@ -1,6 +1,5 @@
-import { useContext } from 'react';
-import { LanguageContext } from '@/contexts/LanguageContext';
+import { t } from '@/lib/i18n';
 
 export function useLanguage() {
-  return useContext(LanguageContext);
+  return { t };
 }

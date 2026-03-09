@@ -8,8 +8,6 @@ import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine'
 import { getWeatherEmoji } from '@/lib/farmConfig';
 import { computeAlertLevel, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 import { DataFreshnessIndicator } from '@/components/DataFreshnessIndicator';
-import { LanguageToggle } from '@/components/LanguageToggle';
-import { useLanguage } from '@/hooks/useLanguage';
 
 interface AppHeaderProps {
   onRefresh?: () => void;
@@ -20,18 +18,16 @@ interface AppHeaderProps {
 }
 
 const navItems = [
-  { to: '/', label: 'nav.today' },
-  { to: '/dashboard', label: 'nav.dashboard' },
-  { to: '/market', label: 'nav.market' },
-  { to: '/advisory', label: 'nav.advisory' },
-  { to: '/settings', label: 'nav.settings' },
+  { to: '/', label: 'Today' },
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/import', label: 'Import' },
+  { to: '/market', label: 'Market' },
+  { to: '/advisory', label: 'Advisory' },
+  { to: '/settings', label: 'Settings' },
 ];
 
 const CROP_EMOJI: Record<string, string> = {
   'Tomato': '🍅', 'Onion': '🧅', 'Banana': '🍌', 'Bitter Gourd': '🥒', 'Papaya': '🍈',
-};
-const CROP_MARATHI: Record<string, string> = {
-  'Tomato': 'टोमॅटो', 'Onion': 'कांदा', 'Banana': 'केळ', 'Bitter Gourd': 'करेला', 'Papaya': 'पपई',
 };
 
 function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): string {
@@ -39,7 +35,7 @@ function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): str
   const dateStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
   const month = today.getMonth() + 1;
 
-  let text = `🌾 *KisanMitra रिपोर्ट — ${dateStr}*\n📍 भावेरे, नाशिक\n━━━━━━━━━━━━━━━━\n💰 *आजचे मंडी भाव* (Today's Prices)\n━━━━━━━━━━━━━━━━\n`;
+  let text = `🌾 *KisanMitra Report — ${dateStr}*\n📍 Bhavere, Nashik\n━━━━━━━━━━━━━━━━\n💰 *Today's Mandi Prices*\n━━━━━━━━━━━━━━━━\n`;
 
   for (const crop of CROPS) {
     const mainMandi = crop.commodityName === 'Onion' ? 'Lasalgaon' : 'Nashik';
@@ -51,12 +47,11 @@ function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): str
       arrow = pct > 5 ? '▲' : pct < -5 ? '▼' : '→';
     }
     const emoji = CROP_EMOJI[crop.commodityName] || '🌾';
-    const marathi = CROP_MARATHI[crop.commodityName] || crop.name;
-    text += `${emoji} ${marathi} (${mainMandi}): ${p ? `₹${p.modal_price.toLocaleString()}/qtl ${arrow}` : 'N/A'}\n`;
+    text += `${emoji} ${crop.name} (${mainMandi}): ${p ? `₹${p.modal_price.toLocaleString()}/qtl ${arrow}` : 'N/A'}\n`;
   }
 
   if (weather && weather.length >= 3) {
-    text += `\n━━━━━━━━━━━━━━━━\n🌤 *हवामान* (Weather Next 3 Days)\n━━━━━━━━━━━━━━━━\n`;
+    text += `\n━━━━━━━━━━━━━━━━\n🌤 *Weather (Next 3 Days)*\n━━━━━━━━━━━━━━━━\n`;
     for (let i = 0; i < 3; i++) {
       const d = weather[i];
       const dt = new Date(d.forecast_date);
@@ -67,9 +62,9 @@ function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): str
 
   if (weather) {
     const alerts = getPrioritySummary(generateAllAdvisories(weather));
-    text += `\n━━━━━━━━━━━━━━━━\n⚠️ *इशारे* (Alerts)\n━━━━━━━━━━━━━━━━\n`;
+    text += `\n━━━━━━━━━━━━━━━━\n⚠️ *Alerts*\n━━━━━━━━━━━━━━━━\n`;
     if (alerts.length === 0) {
-      text += `✅ कोणतेही महत्त्वाचे इशारे नाहीत\n`;
+      text += `✅ No significant alerts\n`;
     } else {
       const icons: Record<string, string> = { DANGER: '🔴', WARNING: '🟡', INFO: '🔵' };
       alerts.slice(0, 3).forEach(a => {
@@ -88,20 +83,19 @@ function buildWhatsAppReport(prices: PriceRecord[], weather?: WeatherDay[]): str
     const season = getSeasonalContext(crop.commodityName, month);
     const signal = getSellSignal(p?.modal_price ?? null, avg90, alertLevel, season.season);
     if (signal.signal === 'SELL NOW' || signal.signal === 'FORCED SELL') {
-      sellLines.push(`${CROP_EMOJI[crop.commodityName]} ${CROP_MARATHI[crop.commodityName]}: ${signal.signal} — ${signal.reason}`);
+      sellLines.push(`${CROP_EMOJI[crop.commodityName]} ${crop.name}: ${signal.signal} — ${signal.reason}`);
     }
   }
   if (sellLines.length > 0) {
-    text += `\n━━━━━━━━━━━━━━━━\n📊 *विकणे सिग्नल* (Sell Signal)\n━━━━━━━━━━━━━━━━\n`;
+    text += `\n━━━━━━━━━━━━━━━━\n📊 *Sell Signals*\n━━━━━━━━━━━━━━━━\n`;
     text += sellLines.join('\n') + '\n';
   }
 
-  text += `\n🌾 KisanMitra — भावेरे शेती बुद्धिमत्ता`;
+  text += `\n🌾 KisanMitra — Bhavere Farm Intelligence`;
   return text;
 }
 
 export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], weather }: AppHeaderProps) {
-  const { language, setLanguage, t } = useLanguage();
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -126,15 +120,14 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
               🌾 KisanMitra
             </h1>
             <p className="text-xs md:text-sm text-primary-foreground/80">
-              {t('misc.bhavereNashik')} — Personal Farm Intelligence
+              Bhavere, Nashik — Personal Farm Intelligence
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <LanguageToggle language={language} onToggle={setLanguage} />
             <DataFreshnessIndicator onRefresh={onRefresh} />
             <Button size="sm" variant="secondary" onClick={handlePrint} className="text-xs print:hidden">
               <FileText className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">{t('btn.generateReport')}</span>
+              <span className="hidden sm:inline">Generate Report</span>
             </Button>
             <Button size="sm" variant="secondary" onClick={handleShare} className="text-xs print:hidden">
               <Share2 className="h-3 w-3 mr-1" />
@@ -143,7 +136,7 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
             {onRefresh && (
               <Button size="sm" variant="secondary" onClick={onRefresh} disabled={isRefreshing} className="text-xs print:hidden">
                 <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? (refreshLabel || 'Fetching...') : t('btn.refreshAll')}
+                {isRefreshing ? (refreshLabel || 'Fetching...') : 'Refresh All'}
               </Button>
             )}
           </div>
@@ -163,7 +156,7 @@ export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], 
                 }`
               }
             >
-              {t(item.label)}
+              {item.label}
             </NavLink>
           ))}
         </nav>

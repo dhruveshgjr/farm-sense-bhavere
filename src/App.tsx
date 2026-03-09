@@ -10,6 +10,7 @@ import MarketPage from "./pages/MarketPage";
 import AdvisoryPage from "./pages/AdvisoryPage";
 import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
+import DataImportPage from "./pages/DataImportPage";
 import ReportPrint from "./pages/ReportPrint";
 import NotFound from "./pages/NotFound";
 import { initClientCron } from "./lib/cronManager";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/" element={<TodayPage />} />
           <Route path="/dashboard" element={<Index />} />
           <Route path="/market" element={<MarketPage />} />
+          <Route path="/import" element={<DataImportPage />} />
           <Route path="/advisory" element={<AdvisoryPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />

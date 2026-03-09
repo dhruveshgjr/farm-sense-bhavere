@@ -7,7 +7,7 @@ import { getSeasonalContext, getSellSignal, computeAlertLevel } from '@/lib/tren
 import { formatLastUpdated } from '@/lib/timeFormat';
 import { ManualPriceEntry } from './ManualPriceEntry';
 import { getSettings } from '@/lib/settingsStore';
-import { getSignalText, getLanguage } from '@/lib/i18n';
+import { getSignalText } from '@/lib/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MarketPulseSectionProps {
@@ -25,7 +25,6 @@ function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodi
   const month = new Date().getMonth() + 1;
   const season = getSeasonalContext(commodity, month);
   const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
-  const lang = getLanguage();
 
   const colorMap: Record<string, string> = {
     green: 'bg-success/20 text-success',
@@ -37,7 +36,7 @@ function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodi
 
   return (
     <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${colorMap[signal.color]}`}>
-      {getSignalText(signal.signal, lang)}
+      {getSignalText(signal.signal)}
     </span>
   );
 }

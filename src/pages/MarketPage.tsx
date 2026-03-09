@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { CROPS } from '@/lib/farmConfig';
-import { usePriceHistory, type PriceRecord } from '@/hooks/usePrices';
+import { usePriceHistory } from '@/hooks/usePrices';
 import { computeVolatility } from '@/lib/trendEngine';
 import { MandiComparison } from '@/components/dashboard/MandiComparison';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
@@ -56,7 +56,7 @@ const MarketPage = () => {
           return (
             <div key={crop.name} className="bg-card rounded-lg shadow-sm overflow-hidden">
               <div className="section-header section-header-market flex items-center justify-between">
-                <span>{crop.name} ({crop.localName})<span className={`ml-2 text-[10px] ${volColor}`}>Vol: {vol.score.toFixed(0)}% ({vol.label})</span></span>
+                <span>{crop.name}<span className={`ml-2 text-[10px] ${volColor}`}>Vol: {vol.score.toFixed(0)}% ({vol.label})</span></span>
                 <button onClick={() => exportCsv(crop.commodityName)} className="text-[10px] underline opacity-80">Export CSV</button>
               </div>
               <div className="p-3">

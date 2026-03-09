@@ -1,169 +1,151 @@
-export type Lang = 'en' | 'mr';
-
-const translations: Record<string, Record<Lang, string>> = {
+// English-only translations — Marathi removed
+const translations: Record<string, string> = {
   // Navigation
-  'nav.today': { en: 'Today', mr: 'आज' },
-  'nav.dashboard': { en: 'Dashboard', mr: 'डॅशबोर्ड' },
-  'nav.market': { en: 'Market', mr: 'बाजार' },
-  'nav.advisory': { en: 'Advisory', mr: 'सल्ला' },
-  'nav.history': { en: 'History', mr: 'इतिहास' },
-  'nav.settings': { en: 'Settings', mr: 'सेटिंग्ज' },
+  'nav.today': 'Today',
+  'nav.dashboard': 'Dashboard',
+  'nav.market': 'Market',
+  'nav.advisory': 'Advisory',
+  'nav.history': 'History',
+  'nav.settings': 'Settings',
+  'nav.import': 'Import',
 
   // Section headers
-  'section.weather': { en: '10-Day Weather Forecast', mr: '१०-दिवसीय हवामान अंदाज' },
-  'section.market': { en: 'Market Pulse — Current Mandi Prices', mr: 'बाजार नाडी — आजचे मंडी भाव' },
-  'section.trends': { en: 'Price Trend Analysis', mr: 'किंमत ट्रेंड विश्लेषण' },
-  'section.advisory': { en: 'Crop Advisory — This Week', mr: 'पीक सल्ला — या आठवड्यात' },
-  'section.opportunities': { en: 'Market Opportunities & Alerts', mr: 'बाजार संधी आणि इशारे' },
-  'section.aiAdvisor': { en: 'AI Farm Advisor', mr: 'AI शेती सल्लागार' },
-  'section.supplyIntel': { en: 'Supply Intelligence', mr: 'पुरवठा बुद्धिमत्ता' },
-  'section.cropCalendar': { en: 'Crop Activity Calendar', mr: 'पीक क्रिया दिनदर्शिका' },
+  'section.weather': '10-Day Weather Forecast',
+  'section.market': 'Market Pulse — Current Mandi Prices',
+  'section.trends': 'Price Trend Analysis',
+  'section.advisory': 'Crop Advisory — This Week',
+  'section.opportunities': 'Market Opportunities & Alerts',
+  'section.aiAdvisor': 'AI Farm Advisor',
+  'section.supplyIntel': 'Supply Intelligence',
+  'section.cropCalendar': 'Crop Activity Calendar',
 
   // Sell signals
-  'signal.sellNow': { en: 'SELL NOW', mr: 'आत्ता विका' },
-  'signal.hold': { en: 'HOLD', mr: 'थांबा' },
-  'signal.wait': { en: 'WAIT', mr: 'वाट पाहा' },
-  'signal.forcedSell': { en: 'FORCED SELL', mr: 'विकणे आवश्यक' },
-  'signal.noData': { en: 'NO DATA', mr: 'माहिती नाही' },
-  'signal.noHistory': { en: 'NO HISTORY YET', mr: 'इतिहास नाही' },
+  'signal.sellNow': 'SELL NOW',
+  'signal.hold': 'HOLD',
+  'signal.wait': 'WAIT',
+  'signal.forcedSell': 'FORCED SELL',
+  'signal.noData': 'NO DATA',
+  'signal.noHistory': 'NO HISTORY YET',
 
   // Season
-  'season.high': { en: 'HIGH', mr: 'चांगला काळ' },
-  'season.low': { en: 'LOW', mr: 'कमी भाव' },
-  'season.neutral': { en: 'NEUTRAL', mr: 'सामान्य' },
+  'season.high': 'HIGH',
+  'season.low': 'LOW',
+  'season.neutral': 'NEUTRAL',
 
   // Alert levels
-  'alert.danger': { en: 'DANGER', mr: 'धोका' },
-  'alert.warning': { en: 'WARNING', mr: 'इशारा' },
-  'alert.info': { en: 'INFO', mr: 'माहिती' },
+  'alert.danger': 'DANGER',
+  'alert.warning': 'WARNING',
+  'alert.info': 'INFO',
 
   // Data freshness
-  'freshness.live': { en: 'Live', mr: 'थेट' },
-  'freshness.recent': { en: 'Recent', mr: 'ताजे' },
-  'freshness.aging': { en: 'Aging', mr: 'जुने होत आहे' },
-  'freshness.stale': { en: 'Stale', mr: 'जुने' },
+  'freshness.live': 'Live',
+  'freshness.recent': 'Recent',
+  'freshness.aging': 'Aging',
+  'freshness.stale': 'Stale',
 
   // Crops
-  'crop.Banana': { en: 'Banana', mr: 'केळ' },
-  'crop.Tomato': { en: 'Tomato', mr: 'टोमॅटो' },
-  'crop.Bitter Gourd': { en: 'Bitter Gourd', mr: 'करेला' },
-  'crop.Papaya': { en: 'Papaya', mr: 'पपई' },
-  'crop.Onion': { en: 'Onion', mr: 'कांदा' },
+  'crop.Banana': 'Banana',
+  'crop.Tomato': 'Tomato',
+  'crop.Bitter Gourd': 'Bitter Gourd',
+  'crop.Papaya': 'Papaya',
+  'crop.Onion': 'Onion',
 
   // Weather
-  'weather.rain': { en: 'Rain', mr: 'पाऊस' },
-  'weather.wind': { en: 'Wind', mr: 'वारा' },
-  'weather.maxTemp': { en: 'Max Temp', mr: 'जास्तीत जास्त तापमान' },
-  'weather.rainyDays': { en: 'Rainy days', mr: 'पावसाळी दिवस' },
+  'weather.rain': 'Rain',
+  'weather.wind': 'Wind',
+  'weather.maxTemp': 'Max Temp',
+  'weather.rainyDays': 'Rainy days',
 
   // Buttons
-  'btn.refreshAll': { en: 'Refresh All Data', mr: 'सर्व डेटा रिफ्रेश करा' },
-  'btn.generateReport': { en: 'Generate Report', mr: 'अहवाल तयार करा' },
-  'btn.shareWhatsApp': { en: 'Share via WhatsApp', mr: 'WhatsApp वर शेअर करा' },
-  'btn.fetchPrices': { en: 'Fetch Latest Prices', mr: 'ताज्या किंमती आणा' },
-  'btn.loadHistory': { en: 'Load 90-Day History', mr: '९०-दिवसीय इतिहास लोड करा' },
-  'btn.runNow': { en: 'Run Now', mr: 'आत्ता चालवा' },
-  'btn.refreshAdvice': { en: 'Refresh Advice', mr: 'सल्ला रिफ्रेश करा' },
+  'btn.refreshAll': 'Refresh All Data',
+  'btn.generateReport': 'Generate Report',
+  'btn.shareWhatsApp': 'Share via WhatsApp',
+  'btn.fetchPrices': 'Fetch Latest Prices',
+  'btn.loadHistory': 'Load 90-Day History',
+  'btn.runNow': 'Run Now',
+  'btn.refreshAdvice': 'Refresh Advice',
 
   // Settings
-  'settings.systemHealth': { en: 'System Health', mr: 'सिस्टम आरोग्य' },
-  'settings.automationStatus': { en: 'Automation Status', mr: 'स्वयंचलन स्थिती' },
-  'settings.telegram': { en: 'Telegram Delivery', mr: 'टेलिग्राम डिलिव्हरी' },
-  'settings.manualEntry': { en: 'Manual Price Entry', mr: 'किंमत स्वहस्ते टाका' },
+  'settings.systemHealth': 'System Health',
+  'settings.automationStatus': 'Automation Status',
+  'settings.telegram': 'Telegram Delivery',
+  'settings.manualEntry': 'Manual Price Entry',
 
   // Empty states
-  'empty.noWeatherRisk': { en: 'No significant weather risks this week', mr: 'या आठवड्यात कोणतेही हवामान धोके नाहीत' },
-  'empty.pricesNormal': { en: 'All crop prices within normal range', mr: 'सर्व पिकांच्या किंमती सामान्य आहेत' },
-  'empty.chartAfter7': { en: 'Chart available after 7 days of price data', mr: '७ दिवसांनंतर चार्ट उपलब्ध होईल' },
+  'empty.noWeatherRisk': 'No significant weather risks this week',
+  'empty.pricesNormal': 'All crop prices within normal range',
+  'empty.chartAfter7': 'Chart available after 7 days of price data',
 
   // Toasts
-  'toast.dataFetchFailed': { en: 'Data fetch failed', mr: 'डेटा मिळवणे अयशस्वी' },
-  'toast.priceSaved': { en: 'Price saved', mr: 'किंमत जतन केली' },
-  'toast.reportSent': { en: 'Report sent', mr: 'अहवाल पाठवला' },
+  'toast.dataFetchFailed': 'Data fetch failed',
+  'toast.priceSaved': 'Price saved',
+  'toast.reportSent': 'Report sent',
 
   // Today page
-  'today.priority': { en: "Today's Priority", mr: 'आजचे प्राधान्य' },
-  'today.clearDay': { en: 'No critical actions today — normal farm operations', mr: 'आज कोणतीही महत्त्वाची कामे नाहीत — सामान्य शेती कामे' },
-  'today.weatherToday': { en: 'Weather Today', mr: 'आजचे हवामान' },
-  'today.bestSell': { en: 'Best Sell Today', mr: 'आज सर्वोत्तम विक्री' },
-  'today.topAlert': { en: 'Top Alert', mr: 'मुख्य इशारा' },
-  'today.noAlerts': { en: 'No alerts', mr: 'इशारे नाहीत' },
-  'today.fullDashboard': { en: 'Full Dashboard', mr: 'पूर्ण डॅशबोर्ड' },
-  'today.marketPrices': { en: 'Market Prices', mr: 'बाजार भाव' },
-  'today.allAdvisories': { en: 'All Advisories', mr: 'सर्व सल्ले' },
-  'today.shareReport': { en: 'Share Report', mr: 'अहवाल शेअर करा' },
-  'today.lastUpdated': { en: 'Last updated', mr: 'शेवटचे अपडेट' },
-  'today.aiGenerated': { en: '🤖 AI generated', mr: '🤖 AI निर्मित' },
-  'today.criticalAlert': { en: '🔴 Critical alert', mr: '🔴 गंभीर इशारा' },
-  'today.weatherWarning': { en: '🟡 Weather warning', mr: '🟡 हवामान इशारा' },
-  'today.clear': { en: '✅ Clear', mr: '✅ सामान्य' },
-  'today.addApiKey': { en: 'Add DATAGOV_API_KEY to see sell signals', mr: 'विक्री सिग्नल पाहण्यासाठी DATAGOV_API_KEY जोडा' },
+  'today.priority': "Today's Priority",
+  'today.clearDay': 'No critical actions today — normal farm operations',
+  'today.weatherToday': 'Weather Today',
+  'today.bestSell': 'Best Sell Today',
+  'today.topAlert': 'Top Alert',
+  'today.noAlerts': 'No alerts',
+  'today.fullDashboard': 'Full Dashboard',
+  'today.marketPrices': 'Market Prices',
+  'today.allAdvisories': 'All Advisories',
+  'today.shareReport': 'Share Report',
+  'today.lastUpdated': 'Last updated',
+  'today.aiGenerated': '🤖 AI generated',
+  'today.criticalAlert': '🔴 Critical alert',
+  'today.weatherWarning': '🟡 Weather warning',
+  'today.clear': '✅ Clear',
+  'today.addApiKey': 'Add DATAGOV_API_KEY to see sell signals',
 
   // Misc
-  'misc.bhavereNashik': { en: 'Bhavere, Nashik', mr: 'भावेरे, नाशिक' },
-  'misc.noData': { en: 'No data', mr: 'माहिती नाही' },
+  'misc.bhavereNashik': 'Bhavere, Nashik',
+  'misc.noData': 'No data',
 
   // Setup banners
-  'setup.needApiKey': { en: '⚠️ KisanMitra needs setup: Add DATAGOV_API_KEY to get live mandi prices', mr: '⚠️ KisanMitra सेटअप आवश्यक: थेट मंडी भावांसाठी DATAGOV_API_KEY जोडा' },
-  'setup.openSettings': { en: 'Open Settings →', mr: 'सेटिंग्ज उघडा →' },
-  'setup.needHistory': { en: '📊 No price history yet. Go to Settings → Load 90-Day History to activate trend analysis and sell signals.', mr: '📊 किंमत इतिहास नाही. सेटिंग्ज → ९०-दिवसीय इतिहास लोड करा.' },
-  'setup.goToSettings': { en: 'Go to Settings →', mr: 'सेटिंग्ज वर जा →' },
+  'setup.needApiKey': '⚠️ KisanMitra needs setup: Add DATAGOV_API_KEY to get live mandi prices',
+  'setup.openSettings': 'Open Settings →',
+  'setup.needHistory': '📊 No price history yet. Go to Settings → Load 90-Day History to activate trend analysis and sell signals.',
+  'setup.goToSettings': 'Go to Settings →',
 
   // Smart Advisor
-  'smart_advisor': { en: 'Smart Advisor', mr: 'स्मार्ट सल्लागार' },
-  'smart_advisor_badge': { en: '🧠 Smart Advisor', mr: '🧠 स्मार्ट सल्लागार' },
-  'using_public_data': { en: 'Using public data source', mr: 'सार्वजनिक डेटा स्रोत वापरत आहे' },
-  'no_key_needed': { en: 'No key needed', mr: 'की आवश्यक नाही' },
-  'smart_advisor_active': { en: 'Smart Advisor active', mr: 'स्मार्ट सल्लागार सक्रिय' },
+  'smart_advisor': 'Smart Advisor',
+  'smart_advisor_badge': '🧠 Smart Advisor',
+  'using_public_data': 'Using public data source',
+  'no_key_needed': 'No key needed',
+  'smart_advisor_active': 'Smart Advisor active',
 };
 
-export function t(key: string, lang?: Lang): string {
-  const l = lang || getLanguage();
-  return translations[key]?.[l] || translations[key]?.en || key;
+export function t(key: string): string {
+  return translations[key] || key;
 }
 
-export function getLanguage(): Lang {
-  return (localStorage.getItem('kisanmitra_language') as Lang) || 'en';
+export function getCropName(commodityName: string): string {
+  return translations[`crop.${commodityName}`] || commodityName;
 }
 
-export function setLanguage(lang: Lang) {
-  localStorage.setItem('kisanmitra_language', lang);
-}
-
-export function getCropName(commodityName: string, lang?: Lang): string {
-  const l = lang || getLanguage();
-  return translations[`crop.${commodityName}`]?.[l] || commodityName;
-}
-
-export function getSignalText(signal: string, lang?: Lang): string {
-  const l = lang || getLanguage();
+export function getSignalText(signal: string): string {
   const map: Record<string, string> = {
-    'SELL NOW': t('signal.sellNow', l),
-    'HOLD': t('signal.hold', l),
-    'WAIT': t('signal.wait', l),
-    'FORCED SELL': t('signal.forcedSell', l),
-    'NO DATA': t('signal.noData', l),
-    'NO HISTORY YET': t('signal.noHistory', l),
+    'SELL NOW': t('signal.sellNow'),
+    'HOLD': t('signal.hold'),
+    'WAIT': t('signal.wait'),
+    'FORCED SELL': t('signal.forcedSell'),
+    'NO DATA': t('signal.noData'),
+    'NO HISTORY YET': t('signal.noHistory'),
   };
   return map[signal] || signal;
 }
 
-export function getSeasonText(season: string, lang?: Lang): string {
-  const l = lang || getLanguage();
+export function getSeasonText(season: string): string {
   const map: Record<string, string> = {
-    'HIGH': t('season.high', l),
-    'LOW': t('season.low', l),
-    'NEUTRAL': t('season.neutral', l),
+    'HIGH': t('season.high'),
+    'LOW': t('season.low'),
+    'NEUTRAL': t('season.neutral'),
   };
   return map[season] || season;
 }
 
-export function formatNumber(n: number, lang?: Lang): string {
-  const l = lang || getLanguage();
-  if (l === 'en') return n.toLocaleString('en-IN');
-  const devanagari = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-  return n.toLocaleString('en-IN')
-    .split('')
-    .map(c => /\d/.test(c) ? devanagari[parseInt(c)] : c)
-    .join('');
+export function formatNumber(n: number): string {
+  return n.toLocaleString('en-IN');
 }
