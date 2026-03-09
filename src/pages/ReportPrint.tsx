@@ -123,18 +123,19 @@ const ReportPrint = () => {
       {/* Page 2 */}
       <div className="page-break">
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">⚠️ Advisory Alerts</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">⚠️ Advisory Alerts</h2>
           {sorted.length === 0 ? (
             <p className="text-sm">✅ No active alerts this week</p>
           ) : (
             <div className="space-y-2">
               {sorted.slice(0, 10).map((alert, i) => (
-                <div key={i} className="border border-border rounded p-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{alert.level === 'DANGER' ? '🔴' : alert.level === 'WARNING' ? '🟡' : '🔵'}</span>
-                    <span className="font-semibold">{alert.crop}: {alert.title}</span>
+                <div key={i} className="border border-gray-300 rounded p-3 text-xs bg-gray-50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-lg">{alert.level === 'DANGER' ? '🔴' : alert.level === 'WARNING' ? '🟡' : '🔵'}</span>
+                    <span className="font-bold text-sm">{alert.crop}: {alert.title}</span>
                   </div>
-                  <p className="mt-1 text-muted-foreground">Action: {alert.action}</p>
+                  <p className="font-medium text-black">Action: {alert.action}</p>
+                  <p className="mt-0.5 text-gray-600">{alert.detail}</p>
                 </div>
               ))}
             </div>
@@ -142,7 +143,7 @@ const ReportPrint = () => {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">📊 Sell Signals Summary</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">📊 Sell Signals Summary</h2>
           <div className="grid grid-cols-2 gap-3">
             {CROPS.map(crop => {
               const latest = getLatestPrice(prices, crop.commodityName, 'Nashik') || getLatestPrice(prices, crop.commodityName, 'Lasalgaon');
