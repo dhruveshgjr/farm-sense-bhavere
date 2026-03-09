@@ -32,7 +32,7 @@ const AdvisoryPage = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
-      <AppHeader />
+      <AppHeader weather={forecast} />
       <main className="container mx-auto px-3 py-4 max-w-2xl space-y-4">
         {/* Crop filter - horizontal scroll on mobile */}
         <ScrollArea className="w-full whitespace-nowrap">
