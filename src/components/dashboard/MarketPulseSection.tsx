@@ -147,11 +147,10 @@ export const MarketPulseSection = memo(function MarketPulseSection({ prices, isL
             </thead>
             <tbody>
               {filteredCrops.map(crop => (
-                <>
-                  <tr key={crop.name} className="border-b border-border/50">
+                <Fragment key={crop.name}>
+                  <tr className="border-b border-border/50">
                     <td className="py-2 px-1">
                       <div className="font-medium text-sm">{crop.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{crop.localName}</div>
                     </td>
                     {filteredMandis.map(mandi => {
                       const price = getLatestPrice(prices, crop.commodityName, mandi);
