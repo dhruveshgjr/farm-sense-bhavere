@@ -46,55 +46,55 @@ const ReportPrint = () => {
   }
 
   return (
-    <div className="max-w-[210mm] mx-auto p-6 text-foreground bg-background print:p-0">
+    <div className="max-w-[210mm] mx-auto p-8 text-black bg-white min-h-screen">
       <title>KisanMitra Report — {today} — Bhavere, Nashik</title>
 
       {!printReady && (
-        <div className="no-print mb-4 text-center">
-          <button onClick={() => window.print()} className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">
-            Download as PDF
+        <div className="no-print mb-6 text-center">
+          <button onClick={() => window.print()} className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium shadow-sm">
+            Print / Download PDF
           </button>
         </div>
       )}
 
       {/* Page 1 */}
       <div>
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold">🌾 KisanMitra — Weekly Farm Report</h1>
-          <p className="text-sm text-muted-foreground">Bhavere, Nashik | {today}</p>
+        <div className="text-center mb-8 border-b-2 border-primary pb-6">
+          <h1 className="text-3xl font-bold mb-2">🌾 KisanMitra — Bhavere Farm Daily Intelligence Report</h1>
+          <p className="text-md text-gray-600">Generated on {today} | Freshness: {totalRain > 0 ? 'High Confidence' : 'Medium Confidence'}</p>
         </div>
 
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">🌤 Weather Forecast</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">🌤 Weather Forecast</h2>
           {weather && weather.length > 0 ? (
             <div>
               <div className="grid grid-cols-5 gap-2 mb-3">
                 {weather.slice(0, 5).map(day => (
-                  <div key={day.forecast_date} className="border border-border rounded p-2 text-center text-xs">
+                  <div key={day.forecast_date} className="border border-gray-300 rounded p-2 text-center text-xs">
                     <div className="font-medium">{new Date(day.forecast_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
                     <div className="text-lg">{getWeatherEmoji(day.weathercode)}</div>
                     <div>{Math.round(day.temp_min)}–{Math.round(day.temp_max)}°C</div>
-                    <div className="text-muted-foreground">💧{day.rain_mm.toFixed(1)}mm</div>
+                    <div className="text-gray-600">💧{day.rain_mm.toFixed(1)}mm</div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 font-medium">
                 Summary: {totalRain.toFixed(1)}mm total rain, {rainyDays} rainy days in next 7 days
               </p>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Weather data unavailable</p>
+            <p className="text-sm text-gray-500">Weather data unavailable</p>
           )}
         </section>
 
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">💰 Market Pulse — Mandi Prices</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">💰 Market Pulse — Mandi Prices</h2>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-border">
-                <th className="text-left py-2">Crop</th>
-                {MANDIS.map(m => <th key={m} className="text-right py-2">{m} (₹/qtl)</th>)}
-                <th className="text-center py-2">Signal</th>
+              <tr className="border-b-2 border-gray-300 bg-gray-50">
+                <th className="text-left py-2 px-2">Crop</th>
+                {MANDIS.map(m => <th key={m} className="text-right py-2 px-2">{m} (₹/qtl)</th>)}
+                <th className="text-center py-2 px-2">Signal</th>
               </tr>
             </thead>
             <tbody>
@@ -105,13 +105,13 @@ const ReportPrint = () => {
                 const season = getSeasonalContext(crop.commodityName, month);
                 const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
                 return (
-                  <tr key={crop.name} className="border-b border-border">
-                    <td className="py-2">{crop.name} ({crop.localName})</td>
+                  <tr key={crop.name} className="border-b border-gray-200">
+                    <td className="py-2 px-2">{crop.name} ({crop.localName})</td>
                     {MANDIS.map(mandi => {
                       const p = getLatestPrice(prices, crop.commodityName, mandi);
-                      return <td key={mandi} className="text-right py-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
+                      return <td key={mandi} className="text-right py-2 px-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
                     })}
-                    <td className="text-center py-2 font-bold">{signal.signal}</td>
+                    <td className="text-center py-2 px-2 font-bold">{signal.signal}</td>
                   </tr>
                 );
               })}
@@ -123,18 +123,19 @@ const ReportPrint = () => {
       {/* Page 2 */}
       <div className="page-break">
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">⚠️ Advisory Alerts</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">⚠️ Advisory Alerts</h2>
           {sorted.length === 0 ? (
             <p className="text-sm">✅ No active alerts this week</p>
           ) : (
             <div className="space-y-2">
               {sorted.slice(0, 10).map((alert, i) => (
-                <div key={i} className="border border-border rounded p-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{alert.level === 'DANGER' ? '🔴' : alert.level === 'WARNING' ? '🟡' : '🔵'}</span>
-                    <span className="font-semibold">{alert.crop}: {alert.title}</span>
+                <div key={i} className="border border-gray-300 rounded p-3 text-xs bg-gray-50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-lg">{alert.level === 'DANGER' ? '🔴' : alert.level === 'WARNING' ? '🟡' : '🔵'}</span>
+                    <span className="font-bold text-sm">{alert.crop}: {alert.title}</span>
                   </div>
-                  <p className="mt-1 text-muted-foreground">Action: {alert.action}</p>
+                  <p className="font-medium text-black">Action: {alert.action}</p>
+                  <p className="mt-0.5 text-gray-600">{alert.detail}</p>
                 </div>
               ))}
             </div>
@@ -142,7 +143,7 @@ const ReportPrint = () => {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">📊 Sell Signals Summary</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">📊 Sell Signals Summary</h2>
           <div className="grid grid-cols-2 gap-3">
             {CROPS.map(crop => {
               const latest = getLatestPrice(prices, crop.commodityName, 'Nashik') || getLatestPrice(prices, crop.commodityName, 'Lasalgaon');
@@ -152,11 +153,12 @@ const ReportPrint = () => {
               const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
               const pct = latest && avg90 ? computePctChange(latest.modal_price, avg90) : 0;
               return (
-                <div key={crop.name} className="border border-border rounded p-2 text-xs">
-                  <div className="font-semibold">{crop.name}</div>
+                <div key={crop.name} className="border border-gray-300 rounded p-3 text-xs">
+                  <div className="font-bold text-sm mb-1">{crop.name}</div>
                   <div>Price: {latest ? `₹${latest.modal_price.toLocaleString()}` : '—'}</div>
                   <div>vs 90d avg: {avg90 ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : '—'}</div>
-                  <div className="font-bold mt-1">{signal.signal} — {signal.reason}</div>
+                  <div className="font-bold mt-2 pt-2 border-t border-gray-200">{signal.signal}</div>
+                  <div className="text-gray-600 mt-0.5">{signal.reason}</div>
                 </div>
               );
             })}
@@ -164,8 +166,8 @@ const ReportPrint = () => {
         </section>
       </div>
 
-      <footer className="mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground">
-        KisanMitra — Bhavere, Nashik | {today} | Generated automatically
+      <footer className="mt-12 pt-4 border-t-2 border-gray-200 text-center text-sm font-medium text-gray-500">
+        Generated by KisanMitra | Data: Open-Meteo + Manual Research
       </footer>
     </div>
   );

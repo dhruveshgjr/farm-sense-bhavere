@@ -5,22 +5,19 @@ import { WeatherSection } from '@/components/dashboard/WeatherSection';
 import { SprayCalendarSection } from '@/components/dashboard/SprayCalendarSection';
 import { DiseaseRiskSection } from '@/components/dashboard/DiseaseRiskSection';
 import { MarketPulseSection } from '@/components/dashboard/MarketPulseSection';
-import { PriceTrendsSection } from '@/components/dashboard/PriceTrendsSection';
 import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
-import { OpportunitiesSection } from '@/components/dashboard/OpportunitiesSection';
-import { PriceAlertBanner } from '@/components/dashboard/PriceAlertBanner';
 import { QuickStatsStrip } from '@/components/dashboard/QuickStatsStrip';
 import { AIAdvisorSection } from '@/components/dashboard/AIAdvisorSection';
-import { SupplyIntelSection } from '@/components/dashboard/SupplyIntelSection';
+
 import { SetupBanner } from '@/components/SetupBanner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
-import { StaleFetchBanner } from '@/components/StaleFetchBanner';
+
 import { DataConfidenceBanner } from '@/components/DataConfidenceBanner';
 import { useWeather } from '@/hooks/useWeather';
-import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
+import { usePrices, useFetchPrices } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 import { smartCheckAndNotify } from '@/lib/notificationManager';
@@ -33,7 +30,7 @@ const Index = () => {
   const weather = useWeather();
   const prices = usePrices();
   const fetchPricesMutation = useFetchPrices();
-  const { data: distinctDays = 0 } = useDistinctPriceDays();
+  
   const [refreshLabel, setRefreshLabel] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
@@ -127,7 +124,7 @@ const Index = () => {
     return <OnboardingOverlay onComplete={() => { setShowOnboarding(false); weather.refetch(); }} />;
   }
 
-  const hasPrices = (prices.data?.length ?? 0) > 0;
+  
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
@@ -137,14 +134,7 @@ const Index = () => {
       <AppHeader onRefresh={handleRefresh} isRefreshing={weather.isFetching || fetchPricesMutation.isPending} refreshLabel={refreshLabel} prices={prices.data ?? []} weather={weather.data} />
       <main className="container mx-auto px-3 py-4 space-y-4 max-w-2xl">
         <QuickStatsStrip prices={prices.data ?? []} weather={weather.data} />
-        <StaleFetchBanner />
         <DataConfidenceBanner priceCount={prices.data?.length ?? 0} />
-
-        <PriceAlertBanner prices={prices.data ?? []} />
-
-        <ErrorBoundary section="AI Advisor">
-          <AIAdvisorSection weather={weather.data} prices={prices.data ?? []} alerts={allAlerts} trends={trendData} />
-        </ErrorBoundary>
 
         <ErrorBoundary section="Weather">
           <WeatherSection data={weather.data} isLoading={weather.isLoading} lastFetched={weather.dataUpdatedAt ? new Date(weather.dataUpdatedAt).toISOString() : null} />
@@ -158,24 +148,16 @@ const Index = () => {
           <DiseaseRiskSection forecast={weather.data} />
         </ErrorBoundary>
 
+        <ErrorBoundary section="AI Advisor">
+          <AIAdvisorSection weather={weather.data} prices={prices.data ?? []} alerts={allAlerts} trends={trendData} />
+        </ErrorBoundary>
+
         <ErrorBoundary section="Market Pulse">
           <MarketPulseSection prices={prices.data ?? []} isLoading={prices.isLoading} onFetchPrices={() => fetchPricesMutation.mutate()} isFetching={fetchPricesMutation.isPending} lastUpdated={prices.data?.[0]?.fetched_at} />
         </ErrorBoundary>
 
-        <ErrorBoundary section="Price Trends">
-          <PriceTrendsSection prices={prices.data ?? []} isLoading={prices.isLoading} />
-        </ErrorBoundary>
-
-        <ErrorBoundary section="Supply Intelligence">
-          <SupplyIntelSection />
-        </ErrorBoundary>
-
         <ErrorBoundary section="Advisory">
           <AdvisorySection forecast={weather.data} isLoading={weather.isLoading} />
-        </ErrorBoundary>
-
-        <ErrorBoundary section="Opportunities">
-          <OpportunitiesSection prices={prices.data ?? []} isLoading={prices.isLoading} distinctDays={distinctDays} />
         </ErrorBoundary>
 
         <footer className="text-center text-[10px] text-muted-foreground py-4 print:block">

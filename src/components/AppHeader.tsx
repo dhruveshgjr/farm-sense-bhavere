@@ -16,12 +16,11 @@ interface AppHeaderProps {
 }
 
 const navItems = [
-  { to: '/', label: 'Today' },
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/import', label: 'Import' },
-  { to: '/market', label: 'Market' },
-  { to: '/advisory', label: 'Advisory' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/research', label: '🔬 Research' },
+  { to: '/', label: '📊 Dashboard' },
+  { to: '/import', label: '📥 Import' },
+  { to: '/market', label: '💰 Market' },
+  { to: '/settings', label: '⚙️ Settings' },
 ];
 
 export function AppHeader({ onRefresh, isRefreshing, refreshLabel, prices = [], weather }: AppHeaderProps) {

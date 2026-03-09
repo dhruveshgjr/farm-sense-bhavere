@@ -4,11 +4,10 @@ import { useWeather } from '@/hooks/useWeather';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 
 const navItems = [
-  { to: '/', icon: FileText, label: 'Today', emoji: '📋' },
-  { to: '/dashboard', icon: Home, label: 'Dashboard', emoji: '🏠' },
+  { to: '/', icon: Home, label: 'Dashboard', emoji: '📊' },
+  { to: '/research', icon: FileText, label: 'Research', emoji: '🔬' },
   { to: '/import', icon: Download, label: 'Import', emoji: '📥' },
   { to: '/market', icon: TrendingUp, label: 'Market', emoji: '💰' },
-  { to: '/advisory', icon: Leaf, label: 'Advisory', emoji: '🌱' },
   { to: '/settings', icon: Settings, label: 'Settings', emoji: '⚙️' },
 ];
 

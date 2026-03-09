@@ -3,12 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import TodayPage from "./pages/TodayPage";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
+import ResearchPage from "./pages/ResearchPage";
 import MarketPage from "./pages/MarketPage";
-import AdvisoryPage from "./pages/AdvisoryPage";
-import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import DataImportPage from "./pages/DataImportPage";
 import ReportPrint from "./pages/ReportPrint";
@@ -39,12 +37,11 @@ const App = () => (
       <CronInit />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/dashboard" element={<Index />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/research" element={<ResearchPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/import" element={<DataImportPage />} />
-          <Route path="/advisory" element={<AdvisoryPage />} />
-          <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/report-print" element={<ReportPrint />} />
           <Route path="*" element={<NotFound />} />
