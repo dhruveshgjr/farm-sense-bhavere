@@ -108,7 +108,7 @@ export default function ResearchPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
-      <AppHeader />
+      <AppHeader prices={prices} weather={weather} />
       <main className="container mx-auto px-3 py-4 max-w-7xl">
         <h1 className="text-xl font-bold mb-4">🔬 Research Desk</h1>
         
@@ -131,7 +131,7 @@ export default function ResearchPage() {
                   <tbody>
                     {forecast.slice(0, 10).map(d => (
                       <tr key={d.forecast_date} className="border-b last:border-0 border-border/50">
-                        <td className="py-1.5">{new Date(d.forecast_date).toLocaleDateString('en-IN', {day:'numeric', month:'short'})} {getWeatherEmoji(d.weathercode)}</td>
+                        <td className="py-1.5">{new Date(d.forecast_date).toLocaleDateString('en-IN', {day:'numeric', month:'short'})} {getWeatherEmoji(d.weathercode ?? 0)}</td>
                         <td className="py-1.5">{Math.round(d.temp_min)}–{Math.round(d.temp_max)}°C</td>
                         <td className="py-1.5 text-blue-500 font-medium">{d.rain_mm.toFixed(1)}mm</td>
                         <td className="py-1.5">{Math.round(d.wind_kmh)}km/h</td>

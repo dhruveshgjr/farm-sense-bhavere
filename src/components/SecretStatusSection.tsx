@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/hooks/useLanguage';
+import { t } from '@/lib/i18n';
 
 const SECRETS_TO_CHECK = ['DATAGOV_API_KEY', 'ANTHROPIC_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'];
 
 export function SecretStatusSection() {
-  const { t } = useLanguage();
+  
   const [statuses, setStatuses] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
