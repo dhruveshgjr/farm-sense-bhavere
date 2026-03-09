@@ -73,7 +73,7 @@ export function PriceTrendsSection({ prices, isLoading }: PriceTrendsSectionProp
               <div className="flex items-center justify-between mb-1">
                 <div>
                   <span className="text-xs font-semibold">{crop.name}</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">{crop.localName}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">{crop.commodityName}</span>
                 </div>
                 <AlertBadge level={alertLevel} />
               </div>
