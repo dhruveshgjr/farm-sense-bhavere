@@ -8,7 +8,7 @@ import { MarketPulseSection } from '@/components/dashboard/MarketPulseSection';
 import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
 import { QuickStatsStrip } from '@/components/dashboard/QuickStatsStrip';
 import { AIAdvisorSection } from '@/components/dashboard/AIAdvisorSection';
-import { SupplyIntelSection } from '@/components/dashboard/SupplyIntelSection';
+
 import { SetupBanner } from '@/components/SetupBanner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
