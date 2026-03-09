@@ -39,7 +39,7 @@ export function BottomNav() {
             >
               <span className="text-lg">{item.emoji}</span>
               <span className={`text-[8px] font-medium ${!isActive ? 'hidden min-[420px]:block' : ''}`}>{item.label}</span>
-              {item.to === '/advisory' && alertCount > 0 && (
+              {item.to === '/' && alertCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {alertCount > 9 ? '9+' : alertCount}
                 </span>

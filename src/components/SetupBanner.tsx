@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/hooks/useLanguage';
+import { t } from '@/lib/i18n';
 
 export function SetupBanner() {
-  const { t } = useLanguage();
   const [state, setState] = useState<'loading' | 'need-data' | 'ok'>('loading');
 
   useEffect(() => {

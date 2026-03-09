@@ -19,7 +19,7 @@ interface AIAdvisorSectionProps {
 type AdviceSource = 'ai' | 'smart';
 
 export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices, alerts, trends }: AIAdvisorSectionProps) {
-  const { t } = useLanguage();
+  
   const [adviceText, setAdviceText] = useState<string | null>(null);
   const [adviceSource, setAdviceSource] = useState<AdviceSource>('smart');
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
