@@ -88,13 +88,13 @@ const ReportPrint = () => {
         </section>
 
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">💰 Market Pulse — Mandi Prices</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">💰 Market Pulse — Mandi Prices</h2>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-border">
-                <th className="text-left py-2">Crop</th>
-                {MANDIS.map(m => <th key={m} className="text-right py-2">{m} (₹/qtl)</th>)}
-                <th className="text-center py-2">Signal</th>
+              <tr className="border-b-2 border-gray-300 bg-gray-50">
+                <th className="text-left py-2 px-2">Crop</th>
+                {MANDIS.map(m => <th key={m} className="text-right py-2 px-2">{m} (₹/qtl)</th>)}
+                <th className="text-center py-2 px-2">Signal</th>
               </tr>
             </thead>
             <tbody>
@@ -105,13 +105,13 @@ const ReportPrint = () => {
                 const season = getSeasonalContext(crop.commodityName, month);
                 const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
                 return (
-                  <tr key={crop.name} className="border-b border-border">
-                    <td className="py-2">{crop.name} ({crop.localName})</td>
+                  <tr key={crop.name} className="border-b border-gray-200">
+                    <td className="py-2 px-2">{crop.name} ({crop.localName})</td>
                     {MANDIS.map(mandi => {
                       const p = getLatestPrice(prices, crop.commodityName, mandi);
-                      return <td key={mandi} className="text-right py-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
+                      return <td key={mandi} className="text-right py-2 px-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
                     })}
-                    <td className="text-center py-2 font-bold">{signal.signal}</td>
+                    <td className="text-center py-2 px-2 font-bold">{signal.signal}</td>
                   </tr>
                 );
               })}
