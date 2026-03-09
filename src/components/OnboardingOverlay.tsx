@@ -14,7 +14,7 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState<Step>('welcome');
   const [checks, setChecks] = useState<CheckItem[]>([
     { label: 'Fetching 10-day weather forecast for Bhavere...', done: false },
-    { label: 'Connecting to mandi price database...', done: false },
+    { label: 'Checking price data...', done: false },
     { label: 'Loading crop advisory rules...', done: false },
   ]);
 
