@@ -18,6 +18,7 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { StaleFetchBanner } from '@/components/StaleFetchBanner';
+import { DataConfidenceBanner } from '@/components/DataConfidenceBanner';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
@@ -137,12 +138,7 @@ const Index = () => {
       <main className="container mx-auto px-3 py-4 space-y-4 max-w-2xl">
         <QuickStatsStrip prices={prices.data ?? []} weather={weather.data} />
         <StaleFetchBanner />
-
-        {!hasPrices && !prices.isLoading && (
-          <div className="bg-warning/20 border border-warning rounded-lg p-3 text-sm">
-            ⚠️ No price history yet. Click <strong>'Fetch Latest Prices'</strong> to load today's mandi data.
-          </div>
-        )}
+        <DataConfidenceBanner priceCount={prices.data?.length ?? 0} />
 
         <PriceAlertBanner prices={prices.data ?? []} />
 

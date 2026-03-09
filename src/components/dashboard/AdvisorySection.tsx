@@ -6,9 +6,21 @@ interface AdvisorySectionProps {
   isLoading: boolean;
 }
 
+function getConfidenceIndicator(level: string): { icon: string; text: string; className: string } {
+  switch (level) {
+    case 'DANGER':
+      return { icon: '⚠️', text: 'High confidence — conditions strongly match disease pattern', className: 'text-destructive' };
+    case 'WARNING':
+      return { icon: '🔶', text: 'Moderate confidence', className: 'text-warning' };
+    default:
+      return { icon: 'ℹ️', text: 'Low confidence — preventive measure', className: 'text-info' };
+  }
+}
+
 function AlertCard({ alert }: { alert: CropAlert }) {
   const cls = alert.level === 'DANGER' ? 'alert-danger' : alert.level === 'WARNING' ? 'alert-warning' : 'alert-info';
   const icon = alert.level === 'DANGER' ? '🔴' : alert.level === 'WARNING' ? '🟡' : '🔵';
+  const confidence = getConfidenceIndicator(alert.level);
 
   return (
     <div className={cls}>
@@ -19,8 +31,17 @@ function AlertCard({ alert }: { alert: CropAlert }) {
             <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-medium">{alert.crop}</span>
             <span className="text-xs font-semibold">{alert.title}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{alert.detail}</p>
-          <p className="text-xs font-semibold mt-1">👉 {alert.action}</p>
+          
+          {/* Action - BOLD and prominent */}
+          <p className="text-sm font-bold mt-1.5 text-foreground">👉 {alert.action}</p>
+          
+          {/* Detail - specific weather numbers that triggered the alert */}
+          <p className="text-xs text-muted-foreground mt-1">{alert.detail}</p>
+          
+          {/* Confidence indicator */}
+          <div className={`text-[10px] mt-1.5 ${confidence.className}`}>
+            {confidence.icon} {confidence.text}
+          </div>
         </div>
       </div>
     </div>
