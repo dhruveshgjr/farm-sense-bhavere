@@ -46,22 +46,22 @@ const ReportPrint = () => {
   }
 
   return (
-    <div className="max-w-[210mm] mx-auto p-6 text-foreground bg-background print:p-0">
+    <div className="max-w-[210mm] mx-auto p-8 text-black bg-white min-h-screen">
       <title>KisanMitra Report — {today} — Bhavere, Nashik</title>
 
       {!printReady && (
-        <div className="no-print mb-4 text-center">
-          <button onClick={() => window.print()} className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">
-            Download as PDF
+        <div className="no-print mb-6 text-center">
+          <button onClick={() => window.print()} className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium shadow-sm">
+            Print / Download PDF
           </button>
         </div>
       )}
 
       {/* Page 1 */}
       <div>
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold">🌾 KisanMitra — Weekly Farm Report</h1>
-          <p className="text-sm text-muted-foreground">Bhavere, Nashik | {today}</p>
+        <div className="text-center mb-8 border-b-2 border-primary pb-6">
+          <h1 className="text-3xl font-bold mb-2">🌾 KisanMitra — Bhavere Farm Daily Intelligence Report</h1>
+          <p className="text-md text-gray-600">Generated on {today} | Freshness: {totalRain > 0 ? 'High Confidence' : 'Medium Confidence'}</p>
         </div>
 
         <section className="mb-6">
