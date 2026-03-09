@@ -5,7 +5,7 @@ import { WeatherSection } from '@/components/dashboard/WeatherSection';
 import { SprayCalendarSection } from '@/components/dashboard/SprayCalendarSection';
 import { DiseaseRiskSection } from '@/components/dashboard/DiseaseRiskSection';
 import { MarketPulseSection } from '@/components/dashboard/MarketPulseSection';
-import { PriceAlertBanner } from '@/components/dashboard/PriceAlertBanner';
+import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
 import { QuickStatsStrip } from '@/components/dashboard/QuickStatsStrip';
 import { AIAdvisorSection } from '@/components/dashboard/AIAdvisorSection';
 import { SupplyIntelSection } from '@/components/dashboard/SupplyIntelSection';
