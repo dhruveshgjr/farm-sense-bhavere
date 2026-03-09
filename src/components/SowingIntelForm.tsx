@@ -64,7 +64,7 @@ export function SowingIntelForm() {
           <Select value={crop} onValueChange={setCrop}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {CROPS.map(c => <SelectItem key={c.commodityName} value={c.commodityName}>{c.name} ({c.localName})</SelectItem>)}
+              {CROPS.map(c => <SelectItem key={c.commodityName} value={c.commodityName}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

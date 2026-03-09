@@ -29,8 +29,11 @@ export function SetupBanner() {
     return (
       <div className="sticky top-0 z-[60] px-4 py-2.5 text-sm font-medium flex items-center justify-between gap-2 flex-wrap"
         style={{ backgroundColor: 'hsl(211 80% 42%)', color: 'white' }}>
-        <span>{t('setup.needHistory')}</span>
-        <Link to="/settings" className="underline font-bold whitespace-nowrap">{t('setup.goToSettings')}</Link>
+        <span>📊 Add price data to activate sell signals and market intelligence</span>
+        <div className="flex items-center gap-2">
+          <Link to="/import" className="underline font-bold whitespace-nowrap">Import Data →</Link>
+          <Link to="/settings" className="underline whitespace-nowrap text-xs opacity-80">or Settings</Link>
+        </div>
       </div>
     );
   }

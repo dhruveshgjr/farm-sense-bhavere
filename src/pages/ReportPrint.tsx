@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CROPS, MANDIS, getWeatherEmoji } from '@/lib/farmConfig';
 import { usePrices, getLatestPrice, getAvgPrice } from '@/hooks/usePrices';
 import { useWeather } from '@/hooks/useWeather';
-import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { generateAllAdvisories, getPrioritySummary, computeSprayWindows, computeDiseaseRisks } from '@/lib/advisoryEngine';
 import { computeAlertLevel, computePctChange, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -27,6 +27,8 @@ const ReportPrint = () => {
 
   const allAlerts = weather ? generateAllAdvisories(weather) : {};
   const sorted = getPrioritySummary(allAlerts);
+  const sprayWindows = weather ? computeSprayWindows(weather) : [];
+  const diseaseRisks = weather ? computeDiseaseRisks(weather) : [];
 
   const weekData = weather?.slice(0, 7) ?? [];
   const totalRain = weekData.reduce((s, d) => s + d.rain_mm, 0);
@@ -61,7 +63,13 @@ const ReportPrint = () => {
       <div>
         <div className="text-center mb-8 border-b-2 border-primary pb-6">
           <h1 className="text-3xl font-bold mb-2">🌾 KisanMitra — Bhavere Farm Daily Intelligence Report</h1>
-          <p className="text-md text-gray-600">Generated on {today} | Freshness: {totalRain > 0 ? 'High Confidence' : 'Medium Confidence'}</p>
+        <p className="text-md text-gray-600">
+          Generated on {today} | Confidence: {
+            prices.length > 0 && weather && weather.length >= 7
+              ? (prices.some(p => { const age = (Date.now() - new Date(p.price_date).getTime()) / 86400000; return age <= 3; }) ? 'HIGH ✅' : 'MEDIUM 🟡')
+              : 'LOW 🔴 — Import fresh prices for better accuracy'
+          }
+        </p>
         </div>
 
         <section className="mb-6">
@@ -106,7 +114,7 @@ const ReportPrint = () => {
                 const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
                 return (
                   <tr key={crop.name} className="border-b border-gray-200">
-                    <td className="py-2 px-2">{crop.name} ({crop.localName})</td>
+                    <td className="py-2 px-2">{crop.name}</td>
                     {MANDIS.map(mandi => {
                       const p = getLatestPrice(prices, crop.commodityName, mandi);
                       return <td key={mandi} className="text-right py-2 px-2 font-medium">{p ? `₹${p.modal_price.toLocaleString()}` : '—'}</td>;
@@ -163,6 +171,54 @@ const ReportPrint = () => {
               );
             })}
           </div>
+        </section>
+      </div>
+
+      {/* Page 3 - Spray & Disease */}
+      <div className="page-break">
+        <section className="mb-6">
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">🧪 Spray Calendar</h2>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-300 bg-gray-50">
+                <th className="text-left py-2 px-2">Date</th>
+                <th className="text-center py-2 px-2">Suitable?</th>
+                <th className="text-left py-2 px-2">Reason</th>
+                <th className="text-center py-2 px-2">Confidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sprayWindows.slice(0, 7).map(w => (
+                <tr key={w.date} className="border-b border-gray-200">
+                  <td className="py-2 px-2">{new Date(w.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                  <td className="text-center py-2 px-2">{w.suitable ? '✅ Yes' : '❌ No'}</td>
+                  <td className="py-2 px-2">{w.reason}</td>
+                  <td className="text-center py-2 px-2">{w.confidence}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="mb-6">
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">🦠 Disease Risk Assessment</h2>
+          {diseaseRisks.length === 0 ? (
+            <p className="text-sm">No significant disease risks detected based on current weather conditions.</p>
+          ) : (
+            <div className="space-y-2">
+              {diseaseRisks.map((risk, i) => (
+                <div key={i} className="border border-gray-300 rounded p-3 text-xs bg-gray-50">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm">{risk.crop} — {risk.disease}</span>
+                    <span className="text-xs font-bold">{risk.risk} ({risk.probability}%)</span>
+                  </div>
+                  <p>Trigger: {risk.trigger}</p>
+                  <p>Prevention: {risk.prevention}</p>
+                  <p>Window: {risk.treatmentWindow}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
