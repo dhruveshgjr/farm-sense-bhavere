@@ -1,24 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Copy, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { SetupBanner } from '@/components/SetupBanner';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, getLatestPrice, getAvgPrice, useFetchPrices } from '@/hooks/usePrices';
-import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { generateAllAdvisories, getPrioritySummary, computeSprayWindows, computeDiseaseRisks } from '@/lib/advisoryEngine';
 import { computePctChange, computeAlertLevel, getSeasonalContext, getSellSignal } from '@/lib/trendEngine';
 import { CROPS, getWeatherEmoji } from '@/lib/farmConfig';
 import { formatLastUpdated } from '@/lib/timeFormat';
 import { getSignalText, formatNumber } from '@/lib/i18n';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSmartAdvice } from '@/lib/smartAdvisor';
+import { generateWhatsAppReport } from '@/lib/reportGenerator';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 const TodayPage = () => {
   const { data: weather, dataUpdatedAt } = useWeather();
   const { data: prices = [] } = usePrices();
   const fetchMutation = useFetchPrices();
+  const { toast } = useToast();
   const [aiPriority, setAiPriority] = useState<string | null>(null);
   const [prioritySource, setPrioritySource] = useState<'ai' | 'smart' | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => { document.title = 'KisanMitra — Today\'s Brief'; }, []);
 
@@ -54,6 +61,16 @@ const TodayPage = () => {
   const month = today.getMonth() + 1;
 
   const CROP_EMOJI: Record<string, string> = { 'Banana': '🍌', 'Tomato': '🍅', 'Bitter Gourd': '🥒', 'Papaya': '🍈', 'Onion': '🧅' };
+
+  // Generate full report
+  const report = useMemo(() => {
+    const forecast = weather || [];
+    const allAlerts = generateAllAdvisories(forecast);
+    const alerts = getPrioritySummary(allAlerts);
+    const sprayWindows = computeSprayWindows(forecast);
+    const diseaseRisks = computeDiseaseRisks(forecast);
+    return generateWhatsAppReport(forecast, prices, alerts, sprayWindows, diseaseRisks, month);
+  }, [weather, prices, month]);
 
   // Best sell: crop with SELL NOW signal, or highest % above 90d avg
   let bestCrop: { name: string; emoji: string; price: number; pct: number; mandi: string; signal: string; signalColor: string } | null = null;
@@ -102,6 +119,30 @@ const TodayPage = () => {
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null;
   const hasPrices = prices.length > 0;
+
+  const handleCopyReport = async () => {
+    try {
+      await navigator.clipboard.writeText(report.text);
+      toast({
+        title: "Report copied!",
+        description: "Paste in WhatsApp to share with your family.",
+      });
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Please try the WhatsApp share button instead.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    const isMobile = /Android|iPhone/i.test(navigator.userAgent);
+    const url = isMobile
+      ? `whatsapp://send?text=${encodeURIComponent(report.text)}`
+      : `https://wa.me/?text=${encodeURIComponent(report.text)}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
@@ -157,6 +198,25 @@ const TodayPage = () => {
           </div>
         </div>
 
+        {/* Share Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button 
+            onClick={handleCopyReport} 
+            className="bg-card text-foreground hover:bg-muted border border-border"
+            variant="outline"
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            📋 Copy Report
+          </Button>
+          <Button 
+            onClick={handleShareWhatsApp}
+            className="bg-success text-success-foreground hover:bg-success/90"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            📱 WhatsApp
+          </Button>
+        </div>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-2">
           <Link to="/dashboard" className="bg-primary text-primary-foreground rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity">
@@ -168,14 +228,30 @@ const TodayPage = () => {
           <Link to="/advisory" className="bg-primary text-primary-foreground rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity">
             <span className="text-2xl">🌱</span><span className="text-sm font-medium">All Advisories</span>
           </Link>
-          <button onClick={() => {
-            const text = `🌾 KisanMitra — ${dateStr}\n📍 Bhavere, Nashik\n\n🎯 ${priority.text}`;
-            const url = /Android|iPhone/i.test(navigator.userAgent) ? `whatsapp://send?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
-          }} className="bg-primary text-primary-foreground rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity text-left">
-            <span className="text-2xl">📱</span><span className="text-sm font-medium">Share Report</span>
-          </button>
+          <Link to="/import" className="bg-primary text-primary-foreground rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity">
+            <span className="text-2xl">📥</span><span className="text-sm font-medium">Import Data</span>
+          </Link>
         </div>
+
+        {/* Report Preview Toggle */}
+        <button 
+          onClick={() => setShowPreview(!showPreview)}
+          className="w-full flex items-center justify-between p-3 bg-muted rounded-lg text-sm font-medium"
+        >
+          <span>📄 Preview Full Report</span>
+          {showPreview ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+
+        {/* Report Preview */}
+        {showPreview && (
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <ScrollArea className="h-80">
+              <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words text-foreground">
+                {report.text}
+              </pre>
+            </ScrollArea>
+          </div>
+        )}
 
         <div className="text-center text-[10px] text-muted-foreground flex items-center justify-center gap-2">
           <span>Last updated: {lastUpdated ? formatLastUpdated(lastUpdated) : '—'}</span>
