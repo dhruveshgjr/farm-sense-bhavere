@@ -18,6 +18,7 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { InstallBanner } from '@/components/InstallBanner';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { StaleFetchBanner } from '@/components/StaleFetchBanner';
+import { DataConfidenceBanner } from '@/components/DataConfidenceBanner';
 import { useWeather } from '@/hooks/useWeather';
 import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
