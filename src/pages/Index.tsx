@@ -124,7 +124,7 @@ const Index = () => {
     return <OnboardingOverlay onComplete={() => { setShowOnboarding(false); weather.refetch(); }} />;
   }
 
-  const hasPrices = (prices.data?.length ?? 0) > 0;
+  
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
