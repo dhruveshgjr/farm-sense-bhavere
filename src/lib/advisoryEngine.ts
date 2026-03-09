@@ -7,6 +7,7 @@ export type ForecastDay = {
   rain_mm: number;
   humidity_max: number;
   wind_kmh: number;
+  weathercode?: number;
 };
 
 export type CropAlert = {
@@ -18,10 +19,182 @@ export type CropAlert = {
   day_date?: string;
 };
 
+export type SprayWindow = {
+  date: string;
+  suitable: boolean;
+  reason: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+};
+
+export type DiseaseRisk = {
+  crop: string;
+  disease: string;
+  risk: 'HIGH' | 'MEDIUM' | 'LOW';
+  probability: number;
+  trigger: string;
+  prevention: string;
+  treatmentWindow: string;
+};
+
 function fmtDate(d: string) {
   const dt = new Date(d);
   return `${dt.getDate()}/${dt.getMonth() + 1}`;
 }
+
+function fmtDateLong(d: string) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+// ==================== SPRAY WINDOW LOGIC ====================
+
+export function computeSprayWindows(forecast: ForecastDay[]): SprayWindow[] {
+  return forecast.map(day => {
+    // A day is suitable for spraying if:
+    // 1. Rain < 5mm (spray won't wash off)
+    // 2. Wind < 20 km/h (spray won't drift)
+    // 3. Humidity between 40-85% (spray absorbs properly)
+    // 4. No rain expected next day either (need 6-8 hours drying time)
+
+    const nextDay = forecast.find(d => {
+      const curr = new Date(day.forecast_date);
+      const next = new Date(d.forecast_date);
+      return (next.getTime() - curr.getTime()) === 86400000;
+    });
+
+    const lowRain = (day.rain_mm || 0) < 5;
+    const lowWind = (day.wind_kmh || 0) < 20;
+    const goodHumidity = (day.humidity_max || 60) >= 40 && (day.humidity_max || 60) <= 85;
+    const nextDayDry = !nextDay || (nextDay.rain_mm || 0) < 10;
+
+    const suitable = lowRain && lowWind && goodHumidity && nextDayDry;
+
+    let reason = '';
+    let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
+
+    if (!lowRain) {
+      reason = `Rain ${Math.round(day.rain_mm || 0)}mm — spray will wash off`;
+      confidence = 'LOW';
+    } else if (!lowWind) {
+      reason = `Wind ${Math.round(day.wind_kmh || 0)}km/h — spray drift risk`;
+      confidence = 'LOW';
+    } else if (!goodHumidity) {
+      reason = (day.humidity_max || 60) < 40
+        ? `Humidity ${Math.round(day.humidity_max || 0)}% — too dry, poor absorption`
+        : `Humidity ${Math.round(day.humidity_max || 0)}% — too humid, slow drying`;
+      confidence = 'MEDIUM';
+    } else if (!nextDayDry) {
+      reason = `Rain expected tomorrow (${Math.round(nextDay?.rain_mm || 0)}mm) — insufficient drying time`;
+      confidence = 'MEDIUM';
+    } else {
+      reason = 'Good conditions: low rain, moderate wind, proper humidity';
+      confidence = 'HIGH';
+    }
+
+    return { date: day.forecast_date, suitable, reason, confidence };
+  });
+}
+
+// ==================== DISEASE RISK SCORING ====================
+
+export function computeDiseaseRisks(forecast: ForecastDay[]): DiseaseRisk[] {
+  const risks: DiseaseRisk[] = [];
+
+  // Tomato Late Blight: triggered by 15-28°C + humidity >80% for 2+ consecutive days
+  let tomatoBlightDays = 0;
+  for (const day of forecast) {
+    if ((day.temp_min || 0) >= 13 && (day.temp_max || 0) <= 30 && (day.humidity_max || 0) > 80) {
+      tomatoBlightDays++;
+      if (tomatoBlightDays >= 2) {
+        risks.push({
+          crop: 'Tomato',
+          disease: 'Late Blight (Phytophthora)',
+          risk: tomatoBlightDays >= 3 ? 'HIGH' : 'MEDIUM',
+          probability: Math.min(95, 50 + tomatoBlightDays * 15),
+          trigger: `${tomatoBlightDays} consecutive days of 13-30°C + humidity >80%`,
+          prevention: 'Apply Metalaxyl + Mancozeb (Ridomil Gold) at 2g/L. Spray BEFORE symptoms appear.',
+          treatmentWindow: `Spray before ${fmtDateLong(day.forecast_date)}`
+        });
+        break;
+      }
+    } else {
+      tomatoBlightDays = 0;
+    }
+  }
+
+  // Onion Purple Blotch: humidity >80% + temp 20-35°C + rain
+  for (const day of forecast) {
+    if ((day.humidity_max || 0) > 80 && (day.temp_max || 0) >= 20 && (day.temp_max || 0) <= 38 && (day.rain_mm || 0) > 3) {
+      risks.push({
+        crop: 'Onion',
+        disease: 'Purple Blotch (Alternaria)',
+        risk: (day.rain_mm || 0) > 15 ? 'HIGH' : 'MEDIUM',
+        probability: Math.min(90, 40 + Math.round((day.rain_mm || 0) * 2)),
+        trigger: `Humidity ${Math.round(day.humidity_max || 0)}% + rain ${Math.round(day.rain_mm || 0)}mm on ${fmtDateLong(day.forecast_date)}`,
+        prevention: 'Spray Mancozeb (Dithane M-45) at 2.5g/L or Iprodione. Avoid overhead irrigation.',
+        treatmentWindow: `Spray 1-2 days before ${fmtDateLong(day.forecast_date)}`
+      });
+      break;
+    }
+  }
+
+  // Banana Sigatoka: 3+ consecutive days humidity >85%
+  let sigatokaDays = 0;
+  for (const day of forecast) {
+    if ((day.humidity_max || 0) > 85) {
+      sigatokaDays++;
+      if (sigatokaDays >= 3) {
+        risks.push({
+          crop: 'Banana',
+          disease: 'Sigatoka Leaf Spot',
+          risk: sigatokaDays >= 5 ? 'HIGH' : 'MEDIUM',
+          probability: Math.min(85, 40 + sigatokaDays * 10),
+          trigger: `${sigatokaDays} consecutive days with humidity >85%`,
+          prevention: 'Spray Propiconazole (Tilt) at 1ml/L or Mancozeb at 2.5g/L. Remove infected leaves.',
+          treatmentWindow: `Spray within 2 days`
+        });
+        break;
+      }
+    } else {
+      sigatokaDays = 0;
+    }
+  }
+
+  // Bitter Gourd Powdery Mildew: high humidity + warm dry nights
+  for (const day of forecast) {
+    if ((day.humidity_max || 0) > 80 && (day.temp_min || 0) > 18 && (day.rain_mm || 0) < 5) {
+      risks.push({
+        crop: 'Bitter Gourd',
+        disease: 'Powdery Mildew',
+        risk: 'MEDIUM',
+        probability: 55,
+        trigger: `Warm humid night (${Math.round(day.temp_min || 0)}°C, ${Math.round(day.humidity_max || 0)}% humidity) on ${fmtDateLong(day.forecast_date)}`,
+        prevention: 'Spray Wettable Sulphur (Sulfex) at 3g/L or Triadimefon at 1g/L.',
+        treatmentWindow: `Spray before ${fmtDateLong(day.forecast_date)}`
+      });
+      break;
+    }
+  }
+
+  // Papaya PRSV: rain + warm + aphid-favorable conditions
+  for (const day of forecast) {
+    if ((day.rain_mm || 0) > 10 && (day.temp_max || 0) > 25 && (day.humidity_max || 0) > 75) {
+      risks.push({
+        crop: 'Papaya',
+        disease: 'PRSV (Papaya Ringspot Virus)',
+        risk: 'HIGH',
+        probability: 60,
+        trigger: `Warm wet conditions (${Math.round(day.temp_max || 0)}°C, ${Math.round(day.rain_mm || 0)}mm rain) favor aphid vectors`,
+        prevention: 'Spray mineral oil (1%) to deter aphids. Scout for mosaic patterns. Remove infected plants IMMEDIATELY.',
+        treatmentWindow: `Monitor daily from ${fmtDateLong(day.forecast_date)}`
+      });
+      break;
+    }
+  }
+
+  return risks;
+}
+
+// ==================== EXISTING ALERT RULES (UNCHANGED) ====================
 
 function bananaRules(forecast: ForecastDay[]): CropAlert[] {
   const alerts: CropAlert[] = [];

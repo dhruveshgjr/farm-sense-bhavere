@@ -1,4 +1,5 @@
 import type { ForecastDay, CropAlert } from '@/lib/advisoryEngine';
+import { computeSprayWindows, computeDiseaseRisks } from '@/lib/advisoryEngine';
 import type { PriceRecord } from '@/hooks/usePrices';
 import { computeAlertLevel, computePctChange, getSeasonalContext, getSellSignal } from '@/lib/trendEngine';
 import { getLatestPrice, getAvgPrice } from '@/hooks/usePrices';
@@ -43,6 +44,10 @@ function fmtDate(d: string) {
   return `${dt.getDate()}/${dt.getMonth() + 1}`;
 }
 
+function fmtDateLong(d: string) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
 function buildWeatherRisk(forecast: ForecastDay[]): string {
   if (!forecast || forecast.length === 0) return 'No weather data available. Fetch weather to enable risk analysis.';
 
@@ -80,7 +85,25 @@ function buildWeatherRisk(forecast: ForecastDay[]): string {
     sentence2 = `No extreme weather events in the forecast.`;
   }
 
-  return `${sentence1} ${sentence2}`;
+  // Add spray window info
+  const sprayWindows = computeSprayWindows(forecast);
+  const firstSuitable = sprayWindows.find(w => w.suitable);
+  let sentence3 = '';
+  if (firstSuitable) {
+    sentence3 = ` Next spray window: ${fmtDateLong(firstSuitable.date)} (${firstSuitable.confidence} confidence).`;
+  } else {
+    sentence3 = ` ⚠️ No suitable spray window in 10-day forecast — use rain-fast formulations.`;
+  }
+
+  // Add high-priority disease risk
+  const diseaseRisks = computeDiseaseRisks(forecast);
+  const highRisk = diseaseRisks.find(r => r.risk === 'HIGH');
+  let sentence4 = '';
+  if (highRisk) {
+    sentence4 = ` ⚠️ ${highRisk.disease} risk ${highRisk.probability}% for ${highRisk.crop} — ${highRisk.prevention.split('.')[0]}.`;
+  }
+
+  return `${sentence1} ${sentence2}${sentence3}${sentence4}`;
 }
 
 function buildMarketIntel(prices: PriceRecord[], currentMonth: number): string {

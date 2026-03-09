@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { WeatherSection } from '@/components/dashboard/WeatherSection';
+import { SprayCalendarSection } from '@/components/dashboard/SprayCalendarSection';
+import { DiseaseRiskSection } from '@/components/dashboard/DiseaseRiskSection';
 import { MarketPulseSection } from '@/components/dashboard/MarketPulseSection';
 import { PriceTrendsSection } from '@/components/dashboard/PriceTrendsSection';
 import { AdvisorySection } from '@/components/dashboard/AdvisorySection';
@@ -150,6 +152,14 @@ const Index = () => {
 
         <ErrorBoundary section="Weather">
           <WeatherSection data={weather.data} isLoading={weather.isLoading} lastFetched={weather.dataUpdatedAt ? new Date(weather.dataUpdatedAt).toISOString() : null} />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Spray Calendar">
+          <SprayCalendarSection forecast={weather.data} />
+        </ErrorBoundary>
+
+        <ErrorBoundary section="Disease Risk">
+          <DiseaseRiskSection forecast={weather.data} />
         </ErrorBoundary>
 
         <ErrorBoundary section="Market Pulse">
