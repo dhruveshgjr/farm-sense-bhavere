@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CROPS, MANDIS, getWeatherEmoji } from '@/lib/farmConfig';
 import { usePrices, getLatestPrice, getAvgPrice } from '@/hooks/usePrices';
 import { useWeather } from '@/hooks/useWeather';
-import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
+import { generateAllAdvisories, getPrioritySummary, computeSprayWindows, computeDiseaseRisks } from '@/lib/advisoryEngine';
 import { computeAlertLevel, computePctChange, getSellSignal, getSeasonalContext } from '@/lib/trendEngine';
 import { Skeleton } from '@/components/ui/skeleton';
 
