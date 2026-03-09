@@ -37,12 +37,11 @@ const App = () => (
       <CronInit />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<TodayPage />} />
-          <Route path="/dashboard" element={<Index />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/research" element={<ResearchPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/import" element={<DataImportPage />} />
-          <Route path="/advisory" element={<AdvisoryPage />} />
-          <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/report-print" element={<ReportPrint />} />
           <Route path="*" element={<NotFound />} />

@@ -13,17 +13,17 @@ interface QuickStatsStripProps {
 export function QuickStatsStrip({ prices, weather }: QuickStatsStripProps) {
   const month = new Date().getMonth() + 1;
 
-  // Weather stat
-  let weatherText = '—';
-  if (weather && weather.length >= 3) {
-    const weekData = weather.slice(0, 7);
-    const rainyDays = weekData.filter(d => d.rain_mm > 1).length;
-    const maxTemp = Math.max(...weekData.map(d => d.temp_max));
-    weatherText = `${maxTemp}°C max — ${rainyDays} rainy days`;
-  }
+  // Total rain next 10d
+  const weekData = weather ? weather.slice(0, 10) : [];
+  const totalRain = weekData.reduce((sum, d) => sum + (d.rain_mm || 0), 0);
 
-  // Best price crop
-  let bestPriceText = '—';
+  // Next spray day
+  const sprayWindows = weather ? computeSprayWindows(weather) : [];
+  const nextSpray = sprayWindows.find(w => w.suitable);
+  const nextSprayDay = nextSpray ? new Date(nextSpray.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'None';
+
+  // Best sell
+  let bestSellText = '—';
   let bestPct = -Infinity;
   for (const crop of CROPS) {
     const latest = getLatestPrice(prices, crop.commodityName, 'Nashik') || getLatestPrice(prices, crop.commodityName, 'Lasalgaon');
@@ -32,11 +32,11 @@ export function QuickStatsStrip({ prices, weather }: QuickStatsStripProps) {
       const pct = computePctChange(latest.modal_price, avg90);
       if (pct > bestPct) {
         bestPct = pct;
-        bestPriceText = `${crop.name} ▲${pct.toFixed(0)}%`;
+        bestSellText = `${crop.commodityName} ₹${latest.modal_price}`;
       }
     }
   }
-  if (bestPct <= 0) bestPriceText = 'All near average';
+  if (bestPct <= 0 && bestSellText === '—') bestSellText = 'None';
 
   // Alert count
   let alertCount = 0;
@@ -46,22 +46,11 @@ export function QuickStatsStrip({ prices, weather }: QuickStatsStripProps) {
     alertCount = sorted.filter(a => a.level === 'DANGER' || a.level === 'WARNING').length;
   }
 
-  // Calendar context
-  let calText = '—';
-  for (const crop of CROPS) {
-    if (CROP_CALENDAR[crop.commodityName]?.harvest.includes(month)) {
-      calText = `${crop.name} harvest season`;
-      break;
-    }
-  }
-  const season = CROPS.find(c => getSeasonalContext(c.commodityName, month).season === 'HIGH');
-  if (calText === '—' && season) calText = `${season.name} high season`;
-
   const pills = [
-    { emoji: '🌡️', text: weatherText, anchor: '#weather' },
-    { emoji: '💰', text: `Best: ${bestPriceText}`, anchor: '#market' },
-    { emoji: '⚠️', text: `${alertCount} active alerts`, anchor: '#advisory' },
-    { emoji: '📅', text: calText, anchor: '#calendar' },
+    { emoji: '🌧', text: `Total rain 10d: ${totalRain.toFixed(0)}mm`, anchor: '#weather' },
+    { emoji: '🧪', text: `Next spray: ${nextSprayDay}`, anchor: '#calendar' },
+    { emoji: '💰', text: `Best sell: ${bestSellText}`, anchor: '#market' },
+    { emoji: '⚠️', text: `Active alerts: ${alertCount}`, anchor: '#advisory' },
   ];
 
   return (
