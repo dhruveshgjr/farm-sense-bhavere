@@ -27,6 +27,8 @@ const ReportPrint = () => {
 
   const allAlerts = weather ? generateAllAdvisories(weather) : {};
   const sorted = getPrioritySummary(allAlerts);
+  const sprayWindows = weather ? computeSprayWindows(weather) : [];
+  const diseaseRisks = weather ? computeDiseaseRisks(weather) : [];
 
   const weekData = weather?.slice(0, 7) ?? [];
   const totalRain = weekData.reduce((s, d) => s + d.rain_mm, 0);
