@@ -7,6 +7,7 @@ import type { WeatherDay } from '@/hooks/useWeather';
 import type { CropAlert } from '@/lib/advisoryEngine';
 import { useLanguage } from '@/hooks/useLanguage';
 import { generateSmartAdvice, type SmartAdvice } from '@/lib/smartAdvisor';
+import { Link } from 'react-router-dom';
 
 interface AIAdvisorSectionProps {
   weather?: WeatherDay[];
@@ -24,6 +25,11 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Get latest price date for data basis
+  const latestPriceDate = prices.length > 0 
+    ? prices.reduce((latest, p) => new Date(p.price_date) > new Date(latest) ? p.price_date : latest, prices[0].price_date)
+    : null;
 
   useEffect(() => {
     async function loadCached() {
@@ -103,27 +109,39 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
       return (
         <div className="space-y-3 text-xs">
           {weatherRisk && (
-            <div>
+            <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
               <h4 className="text-[10px] font-bold text-muted-foreground uppercase mb-1">🌤 Weather Risk</h4>
               <p className="leading-relaxed">{weatherRisk}</p>
+              <p className="text-[9px] text-muted-foreground mt-1.5 border-t border-border/50 pt-1">
+                📊 Data basis: 10-day Open-Meteo forecast for Bhavere (19.78°N, 73.91°E)
+              </p>
             </div>
           )}
           {marketIntel && (
-            <div>
+            <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
               <h4 className="text-[10px] font-bold text-muted-foreground uppercase mb-1">💰 Market Intelligence</h4>
               <p className="leading-relaxed">{marketIntel}</p>
+              <p className="text-[9px] text-muted-foreground mt-1.5 border-t border-border/50 pt-1">
+                📊 Data basis: {prices.length} price records{latestPriceDate ? `. Latest: ${new Date(latestPriceDate).toLocaleDateString()}` : ''}
+              </p>
             </div>
           )}
           {actions && (
-            <div>
+            <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
               <h4 className="text-[10px] font-bold text-muted-foreground uppercase mb-1">📋 Top 3 Actions</h4>
               <p className="leading-relaxed whitespace-pre-line">{actions}</p>
+              <p className="text-[9px] text-muted-foreground mt-1.5 border-t border-border/50 pt-1">
+                📊 Data basis: Combined weather + market + seasonal analysis
+              </p>
             </div>
           )}
           {priority && (
             <div className="bg-success/15 rounded-lg p-2.5 border border-success/30">
               <div className="text-[10px] font-bold text-success uppercase mb-0.5">🎯 {t('today.priority')}</div>
               <p className="text-sm font-semibold text-foreground leading-snug">{priority}</p>
+              <p className="text-[9px] text-muted-foreground mt-1.5 border-t border-success/20 pt-1">
+                📊 Data basis: Highest urgency item from all data sources
+              </p>
             </div>
           )}
         </div>
@@ -143,6 +161,9 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
     ? <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">🤖 AI generated</span>
     : <span className="text-[9px] bg-accent/50 text-accent-foreground px-1.5 py-0.5 rounded-full">{t('smart_advisor_badge')}</span>;
 
+  // Check if we have enough data to generate advice
+  const hasEnoughData = (weather && weather.length > 0) || prices.length > 0;
+
   return (
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="px-4 py-3 rounded-t-lg text-sm font-bold tracking-wide uppercase text-primary-foreground"
@@ -158,6 +179,18 @@ export const AIAdvisorSection = memo(function AIAdvisorSection({ weather, prices
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
             </div>
             <p className="text-sm text-muted-foreground">🧠 KisanMitra is thinking...</p>
+          </div>
+        ) : !hasEnoughData ? (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-3">🧠</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Smart Advisor needs data to generate recommendations. Import price data and the advisor will activate instantly.
+            </p>
+            <Link to="/import">
+              <Button size="sm" className="text-xs">
+                Import Data
+              </Button>
+            </Link>
           </div>
         ) : adviceText ? (
           <>

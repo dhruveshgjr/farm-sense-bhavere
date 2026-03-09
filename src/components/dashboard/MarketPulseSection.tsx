@@ -9,6 +9,7 @@ import { ManualPriceEntry } from './ManualPriceEntry';
 import { getSettings } from '@/lib/settingsStore';
 import { getSignalText } from '@/lib/i18n';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Link } from 'react-router-dom';
 
 interface MarketPulseSectionProps {
   prices: PriceRecord[];
@@ -35,9 +36,33 @@ function SellSignalBadge({ prices, commodity }: { prices: PriceRecord[]; commodi
   };
 
   return (
-    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${colorMap[signal.color]}`}>
-      {getSignalText(signal.signal)}
-    </span>
+    <div className="flex flex-col items-center gap-0.5">
+      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${colorMap[signal.color]}`}>
+        {getSignalText(signal.signal)}
+      </span>
+      {avg90 && (
+        <span className="text-[9px] text-muted-foreground">90d: ₹{Math.round(avg90).toLocaleString()}</span>
+      )}
+    </div>
+  );
+}
+
+function SignalReasonRow({ prices, commodity }: { prices: PriceRecord[]; commodity: string }) {
+  const latest = getLatestPrice(prices, commodity, 'Nashik') || getLatestPrice(prices, commodity, 'Lasalgaon');
+  const avg90 = getAvgPrice(prices, commodity, 90);
+  const alertLevel = computeAlertLevel(latest?.modal_price ?? null, avg90);
+  const month = new Date().getMonth() + 1;
+  const season = getSeasonalContext(commodity, month);
+  const signal = getSellSignal(latest?.modal_price ?? null, avg90, alertLevel, season.season);
+
+  if (!signal.reason || signal.signal === 'NO DATA') return null;
+
+  return (
+    <tr className="border-b border-border/30">
+      <td colSpan={MANDIS.length + 2} className="py-1 px-2">
+        <span className="text-[10px] italic text-muted-foreground">↳ {signal.reason}</span>
+      </td>
+    </tr>
   );
 }
 
@@ -84,6 +109,26 @@ export const MarketPulseSection = memo(function MarketPulseSection({ prices, isL
     );
   }
 
+  // Empty state - no price data
+  if (prices.length === 0) {
+    return (
+      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+        <div className="section-header section-header-market">💰 Market Pulse — Current Mandi Prices</div>
+        <div className="p-6 text-center">
+          <div className="text-3xl mb-3">📥</div>
+          <p className="text-sm text-muted-foreground mb-4">
+            No price data yet. Go to Import Data to add your first mandi prices, then watch the magic happen!
+          </p>
+          <Link to="/import">
+            <Button size="sm" className="text-xs">
+              Import Price Data
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="section-header section-header-market">💰 Market Pulse — Current Mandi Prices</div>
@@ -102,49 +147,52 @@ export const MarketPulseSection = memo(function MarketPulseSection({ prices, isL
             </thead>
             <tbody>
               {filteredCrops.map(crop => (
-                <tr key={crop.name} className="border-b border-border/50">
-                  <td className="py-2 px-1">
-                    <div className="font-medium text-sm">{crop.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{crop.localName}</div>
-                  </td>
-                  {filteredMandis.map(mandi => {
-                    const price = getLatestPrice(prices, crop.commodityName, mandi);
-                    const stale = price ? isStalePrice(price) : false;
-                    return (
-                      <td key={mandi} className="text-right py-2 px-1">
-                        {price ? (
-                          <div>
-                            <div className="font-bold flex items-center justify-end gap-1">
-                              ₹{price.modal_price.toLocaleString()}
-                              {stale && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="text-[10px] cursor-help">ℹ️</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="text-xs">Price from {formatLastUpdated(price.fetched_at)} — may not reflect today's market</p>
-                                  </TooltipContent>
-                                </Tooltip>
+                <>
+                  <tr key={crop.name} className="border-b border-border/50">
+                    <td className="py-2 px-1">
+                      <div className="font-medium text-sm">{crop.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{crop.localName}</div>
+                    </td>
+                    {filteredMandis.map(mandi => {
+                      const price = getLatestPrice(prices, crop.commodityName, mandi);
+                      const stale = price ? isStalePrice(price) : false;
+                      return (
+                        <td key={mandi} className="text-right py-2 px-1">
+                          {price ? (
+                            <div>
+                              <div className="font-bold flex items-center justify-end gap-1">
+                                ₹{price.modal_price.toLocaleString()}
+                                {stale && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-[10px] cursor-help">ℹ️</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">Price from {formatLastUpdated(price.fetched_at)} — may not reflect today's market</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground hidden min-[400px]:block">
+                                {price.min_price && price.max_price ? `₹${price.min_price}–${price.max_price}` : '—'}
+                              </div>
+                              {price.arrivals_qtl && (
+                                <div className="text-[9px] text-muted-foreground">📦 {price.arrivals_qtl}qtl</div>
                               )}
+                              <DataQualityBadge commodity={crop.commodityName} mandi={mandi} prices={prices} />
                             </div>
-                            <div className="text-[10px] text-muted-foreground hidden min-[400px]:block">
-                              {price.min_price && price.max_price ? `₹${price.min_price}–${price.max_price}` : '—'}
-                            </div>
-                            {price.arrivals_qtl && (
-                              <div className="text-[9px] text-muted-foreground">📦 {price.arrivals_qtl}qtl</div>
-                            )}
-                            <DataQualityBadge commodity={crop.commodityName} mandi={mandi} prices={prices} />
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">No data</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="text-center py-2 px-1">
-                    <SellSignalBadge prices={prices} commodity={crop.commodityName} />
-                  </td>
-                </tr>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No data</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="text-center py-2 px-1">
+                      <SellSignalBadge prices={prices} commodity={crop.commodityName} />
+                    </td>
+                  </tr>
+                  <SignalReasonRow key={`${crop.name}-reason`} prices={prices} commodity={crop.commodityName} />
+                </>
               ))}
             </tbody>
           </table>

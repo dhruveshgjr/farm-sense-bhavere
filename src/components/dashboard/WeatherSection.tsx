@@ -28,7 +28,20 @@ export function WeatherSection({ data, isLoading, lastFetched }: WeatherSectionP
     );
   }
 
-  if (!data || data.length === 0) return null;
+  // Empty state - no weather data yet
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+        <div className="section-header section-header-weather">🌤 10-Day Weather Forecast — Bhavere</div>
+        <div className="p-6 text-center">
+          <div className="text-3xl mb-3">☁️</div>
+          <p className="text-sm text-muted-foreground">
+            Weather data loading from Open-Meteo... This updates automatically.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const weekData = data.slice(0, 7);
   const totalRain = weekData.reduce((s, d) => s + d.rain_mm, 0);
