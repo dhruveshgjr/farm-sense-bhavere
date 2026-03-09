@@ -65,25 +65,25 @@ const ReportPrint = () => {
         </div>
 
         <section className="mb-6">
-          <h2 className="text-lg font-bold border-b-2 border-primary pb-1 mb-3">🌤 Weather Forecast</h2>
+          <h2 className="text-lg font-bold border-b-2 border-gray-200 pb-1 mb-3 text-primary">🌤 Weather Forecast</h2>
           {weather && weather.length > 0 ? (
             <div>
               <div className="grid grid-cols-5 gap-2 mb-3">
                 {weather.slice(0, 5).map(day => (
-                  <div key={day.forecast_date} className="border border-border rounded p-2 text-center text-xs">
+                  <div key={day.forecast_date} className="border border-gray-300 rounded p-2 text-center text-xs">
                     <div className="font-medium">{new Date(day.forecast_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
                     <div className="text-lg">{getWeatherEmoji(day.weathercode)}</div>
                     <div>{Math.round(day.temp_min)}–{Math.round(day.temp_max)}°C</div>
-                    <div className="text-muted-foreground">💧{day.rain_mm.toFixed(1)}mm</div>
+                    <div className="text-gray-600">💧{day.rain_mm.toFixed(1)}mm</div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 font-medium">
                 Summary: {totalRain.toFixed(1)}mm total rain, {rainyDays} rainy days in next 7 days
               </p>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Weather data unavailable</p>
+            <p className="text-sm text-gray-500">Weather data unavailable</p>
           )}
         </section>
 
