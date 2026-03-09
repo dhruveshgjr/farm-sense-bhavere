@@ -63,7 +63,7 @@ const DataImportPage = () => {
   
   // Single entry state
   const [singleCrop, setSingleCrop] = useState(CROPS[0].commodityName);
-  const [singleMandi, setSingleMandi] = useState(ALL_MANDIS[0]);
+  const [singleMandi, setSingleMandi] = useState<string>(ALL_MANDIS[0]);
   const [singlePrice, setSinglePrice] = useState('');
   const [singleDate, setSingleDate] = useState(new Date().toISOString().split('T')[0]);
   const [singleSaving, setSingleSaving] = useState(false);

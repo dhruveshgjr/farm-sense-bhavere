@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { CROPS } from '@/lib/farmConfig';
 import { getLatestPrice, getAvgPrice, type PriceRecord } from '@/hooks/usePrices';
-import { getCropName, getSignalText, getLanguage } from '@/lib/i18n';
+import { getCropName, getSignalText } from '@/lib/i18n';
 import { computeAlertLevel, getSeasonalContext, getSellSignal, computePctChange } from '@/lib/trendEngine';
 
 interface MandiComparisonProps {
@@ -11,7 +11,6 @@ interface MandiComparisonProps {
 export const MandiComparison = memo(function MandiComparison({ prices }: MandiComparisonProps) {
   const CROP_EMOJI: Record<string, string> = { 'Banana': '🍌', 'Tomato': '🍅', 'Bitter Gourd': '🥒', 'Papaya': '🍈', 'Onion': '🧅' };
   const month = new Date().getMonth() + 1;
-  const lang = getLanguage();
 
   const comparisons = CROPS.map(crop => {
     const nashik = getLatestPrice(prices, crop.commodityName, 'Nashik');
@@ -92,7 +91,7 @@ export const MandiComparison = memo(function MandiComparison({ prices }: MandiCo
                     : `→ Sell at Nashik today (${c.diff.toFixed(1)}%)`}
                 </p>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${signalColorMap[c.signal.color]}`}>
-                  {getSignalText(c.signal.signal, lang)}
+                  {getSignalText(c.signal.signal)}
                   {c.pct !== 0 ? ` (${c.pct > 0 ? '▲' : '▼'}${Math.abs(c.pct).toFixed(0)}%)` : ''}
                 </span>
               </div>
