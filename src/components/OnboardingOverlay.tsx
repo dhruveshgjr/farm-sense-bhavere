@@ -64,9 +64,14 @@ export function OnboardingOverlay({ onComplete }: { onComplete: () => void }) {
 
       // Price database check
       if (!cancelled) {
-        setChecks(prev => prev.map((c, i) =>
-          i === 1 ? { ...c, done: false, warning: '⚠️ Price data needs API key — configure in Settings' } : c
-        ));
+        const { count } = await supabase.from('daily_prices').select('*', { count: 'exact', head: true });
+        if ((count ?? 0) > 0) {
+          setChecks(prev => prev.map((c, i) => i === 1 ? { ...c, done: true } : c));
+        } else {
+          setChecks(prev => prev.map((c, i) =>
+            i === 1 ? { ...c, done: true, warning: '📥 No price data yet — go to Import to add mandi prices' } : c
+          ));
+        }
       }
 
       await new Promise(r => setTimeout(r, 500));

@@ -83,7 +83,7 @@ const AdvisoryPage = () => {
                 <div key={crop.name} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0">
                   <div>
                     <span className="text-sm font-medium">{crop.name}</span>
-                    <span className="text-xs text-muted-foreground ml-1">({crop.localName})</span>
+                    <span className="text-xs text-muted-foreground ml-1">({crop.commodityName})</span>
                   </div>
                   <div className="text-right">
                     <span className={`text-xs font-semibold ${seasonColor}`}>{ctx.season}</span>

@@ -63,7 +63,13 @@ const ReportPrint = () => {
       <div>
         <div className="text-center mb-8 border-b-2 border-primary pb-6">
           <h1 className="text-3xl font-bold mb-2">🌾 KisanMitra — Bhavere Farm Daily Intelligence Report</h1>
-          <p className="text-md text-gray-600">Generated on {today} | Freshness: {totalRain > 0 ? 'High Confidence' : 'Medium Confidence'}</p>
+        <p className="text-md text-gray-600">
+          Generated on {today} | Confidence: {
+            prices.length > 0 && weather && weather.length >= 7
+              ? (prices.some(p => { const age = (Date.now() - new Date(p.price_date).getTime()) / 86400000; return age <= 3; }) ? 'HIGH ✅' : 'MEDIUM 🟡')
+              : 'LOW 🔴 — Import fresh prices for better accuracy'
+          }
+        </p>
         </div>
 
         <section className="mb-6">

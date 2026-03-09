@@ -190,8 +190,8 @@ export const MarketPulseSection = memo(function MarketPulseSection({ prices, isL
                       <SellSignalBadge prices={prices} commodity={crop.commodityName} />
                     </td>
                   </tr>
-                  <SignalReasonRow key={`${crop.name}-reason`} prices={prices} commodity={crop.commodityName} />
-                </>
+                  <SignalReasonRow prices={prices} commodity={crop.commodityName} />
+                </Fragment>
               ))}
             </tbody>
           </table>
