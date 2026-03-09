@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, Fragment } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CROPS, MANDIS } from '@/lib/farmConfig';
