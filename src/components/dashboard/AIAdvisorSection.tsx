@@ -5,7 +5,7 @@ import { formatLastUpdated } from '@/lib/timeFormat';
 import type { PriceRecord } from '@/hooks/usePrices';
 import type { WeatherDay } from '@/hooks/useWeather';
 import type { CropAlert } from '@/lib/advisoryEngine';
-import { useLanguage } from '@/hooks/useLanguage';
+import { t } from '@/lib/i18n';
 import { generateSmartAdvice, type SmartAdvice } from '@/lib/smartAdvisor';
 import { Link } from 'react-router-dom';
 
