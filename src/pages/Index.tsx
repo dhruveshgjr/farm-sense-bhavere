@@ -17,7 +17,7 @@ import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 
 import { DataConfidenceBanner } from '@/components/DataConfidenceBanner';
 import { useWeather } from '@/hooks/useWeather';
-import { usePrices, useFetchPrices, useDistinctPriceDays } from '@/hooks/usePrices';
+import { usePrices, useFetchPrices } from '@/hooks/usePrices';
 import { toast } from '@/hooks/use-toast';
 import { generateAllAdvisories, getPrioritySummary } from '@/lib/advisoryEngine';
 import { smartCheckAndNotify } from '@/lib/notificationManager';
